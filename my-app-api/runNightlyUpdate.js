@@ -1,5 +1,5 @@
 // runNightlyUpdate.js
-const { importProducts } = require('./importProducts');
+const { importProducts } = require('./utils/importProducts');
 const db = require('./db');
 
 const runUpdate = async () => {

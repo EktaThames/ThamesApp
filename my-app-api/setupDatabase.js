@@ -4,24 +4,29 @@ const db = require('./db');
 const setupTables = async () => {
   console.log('Starting database setup...');
   const client = await db.pool.connect();
+
   try {
-    // Drop existing tables to start fresh (optional, good for development)
-    await client.query('DROP TABLE IF EXISTS order_lines, orders, products, customers, users;');
-    console.log('Dropped existing tables.');
+    // Drop tables
+    await client.query(`
+      DROP TABLE IF EXISTS product_pricing, product_barcodes, products, order_lines, orders, customers, users;
+    `);
+    console.log("Dropped old tables.");
 
-    // Drop existing ENUM types
-    await client.query('DROP TYPE IF EXISTS user_role, product_type, order_status;');
-    console.log('Dropped existing ENUM types.');
+    // Drop ENUMs
+    await client.query(`
+      DROP TYPE IF EXISTS user_role, order_status, pmp_type;
+    `);
+    console.log("Dropped old ENUMs.");
 
-    // Create ENUM types for roles and statuses
+    // Create ENUMs
     await client.query(`
       CREATE TYPE user_role AS ENUM ('customer', 'sales_rep', 'picker', 'admin');
-      CREATE TYPE product_type AS ENUM ('promo', 'pmp', 'clearance', 'standard');
       CREATE TYPE order_status AS ENUM ('placed', 'picked', 'completed');
+      CREATE TYPE pmp_type AS ENUM ('PMP', 'PLAIN');
     `);
-    console.log('Created ENUM types.');
+    console.log("Created ENUMs.");
 
-    // Create users table
+    // USERS TABLE
     await client.query(`
       CREATE TABLE users (
         id SERIAL PRIMARY KEY,
@@ -30,9 +35,9 @@ const setupTables = async () => {
         role user_role NOT NULL
       );
     `);
-    console.log('Created "users" table.');
+    console.log("Created 'users' table.");
 
-    // Create customers table
+    // CUSTOMERS TABLE
     await client.query(`
       CREATE TABLE customers (
         id SERIAL PRIMARY KEY,
@@ -41,23 +46,59 @@ const setupTables = async () => {
         user_id INTEGER REFERENCES users(id)
       );
     `);
-    console.log('Created "customers" table.');
+    console.log("Created 'customers' table.");
 
-    // Create products table
+    // PRODUCTS TABLE (based on CSV)
     await client.query(`
       CREATE TABLE products (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
+        item VARCHAR(50) UNIQUE NOT NULL,
+        vat VARCHAR(10),
+        hierarchy1 INTEGER,
+        hierarchy2 INTEGER,
         description TEXT,
-        price NUMERIC(10, 2) NOT NULL,
-        size VARCHAR(50),
-        brand VARCHAR(100),
-        type product_type DEFAULT 'standard'
+        pack_description TEXT,
+        qty_in_stock INTEGER,
+        cases_in_stock INTEGER,
+        max_order INTEGER,
+        rrp NUMERIC(10,2),
+        por NUMERIC(10,2),
+        pmp_plain pmp_type,
+        type VARCHAR(50)
       );
     `);
-    console.log('Created "products" table.');
+    console.log("Created 'products' table.");
 
-    // Create orders table
+    // BARCODE TABLE (supports unlimited EANs)
+    await client.query(`
+      CREATE TABLE product_barcodes (
+        id SERIAL PRIMARY KEY,
+        product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+        barcode VARCHAR(50),
+        barcode_type VARCHAR(50)
+      );
+    `);
+    console.log("Created 'product_barcodes' table.");
+
+    // PRICING TABLE (3 tiers + promo)
+    await client.query(`
+      CREATE TABLE product_pricing (
+        id SERIAL PRIMARY KEY,
+        product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+        tier INTEGER NOT NULL,      
+        pack_size TEXT,
+        sell_price NUMERIC(10,2),
+        promo_price NUMERIC(10,2),
+        promo_id VARCHAR(50),
+        promo_start DATE,
+        promo_end DATE,
+                CONSTRAINT product_tier_unique UNIQUE (product_id, tier)
+
+      );
+    `);
+    console.log("Created 'product_pricing' table.");
+
+    // ORDERS TABLE
     await client.query(`
       CREATE TABLE orders (
         id SERIAL PRIMARY KEY,
@@ -67,9 +108,9 @@ const setupTables = async () => {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
-    console.log('Created "orders" table.');
+    console.log("Created 'orders' table.");
 
-    // Create order_lines table
+    // ORDER LINES TABLE
     await client.query(`
       CREATE TABLE order_lines (
         id SERIAL PRIMARY KEY,
@@ -78,11 +119,11 @@ const setupTables = async () => {
         quantity INTEGER NOT NULL
       );
     `);
-    console.log('Created "order_lines" table.');
+    console.log("Created 'order_lines' table.");
 
-    console.log('Database setup complete!');
+    console.log("✅ Database setup complete!");
   } catch (err) {
-    console.error('Error during database setup:', err);
+    console.error("❌ Error during setup:", err);
   } finally {
     client.release();
   }
