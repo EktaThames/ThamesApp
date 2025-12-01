@@ -1,5 +1,4 @@
-// import/importProducts.js
-require("dotenv").config();
+require('dotenv').config();
 const fs = require("fs");
 const path = require("path");
 const csv = require("csv-parser");
@@ -8,10 +7,8 @@ const db = require("../db");
 // Helpers
 const cleanInt = (v) =>
   v && v.toString().trim() !== "" ? parseInt(v) : null;
-
 const cleanFloat = (v) =>
   v && v.toString().trim() !== "" ? parseFloat(v) : null;
-
 const cleanDate = (v) =>
   v && v.toString().trim() !== "" ? v : null;
 
@@ -35,6 +32,15 @@ async function importProducts() {
     });
 
     console.log(`Total rows found: ${rowCount}`);
+
+    // Pre-fetch all valid category and subcategory IDs for quick lookups
+    const categoryResult = await db.query('SELECT id FROM categories');
+    const validCategoryIds = new Set(categoryResult.rows.map(r => r.id));
+
+    const subcategoryResult = await db.query('SELECT id FROM subcategories');
+    const validSubcategoryIds = new Set(subcategoryResult.rows.map(r => r.id));
+
+    console.log(`Found ${validCategoryIds.size} valid categories and ${validSubcategoryIds.size} valid subcategories.`);
 
     for (const row of rows) {
       const {
@@ -82,20 +88,26 @@ async function importProducts() {
 
       if (!item) continue;
 
+      // Validate category and subcategory IDs before insertion
+      const categoryId = cleanInt(hierarchy1);
+      const subcategoryId = cleanInt(hierarchy2);
+      const finalCategoryId = validCategoryIds.has(categoryId) ? categoryId : null;
+      const finalSubcategoryId = validSubcategoryIds.has(subcategoryId) ? subcategoryId : null;
+
       // ---------------------------------------------
       // UPSERT PRODUCT
       // ---------------------------------------------
       const productResult = await db.query(
         `
           INSERT INTO products
-          (item, vat, hierarchy1, hierarchy2, description, pack_description,
+          (item, vat, category_id, subcategory_id, description, pack_description,
            qty_in_stock, cases_in_stock, max_order, rrp, por, pmp_plain, type)
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
           ON CONFLICT (item)
           DO UPDATE SET
             vat = EXCLUDED.vat,
-            hierarchy1 = EXCLUDED.hierarchy1,
-            hierarchy2 = EXCLUDED.hierarchy2,
+            category_id = EXCLUDED.category_id,
+            subcategory_id = EXCLUDED.subcategory_id,
             description = EXCLUDED.description,
             pack_description = EXCLUDED.pack_description,
             qty_in_stock = EXCLUDED.qty_in_stock,
@@ -110,8 +122,8 @@ async function importProducts() {
         [
           cleanInt(item),
           VAT,
-          cleanInt(hierarchy1),
-          cleanInt(hierarchy2),
+          finalCategoryId,
+          finalSubcategoryId,
           description,
           pack_description,
           cleanInt(qty_in_stock),
@@ -198,4 +210,4 @@ async function importProducts() {
   }
 }
 
-importProducts();
+module.exports = { importProducts };

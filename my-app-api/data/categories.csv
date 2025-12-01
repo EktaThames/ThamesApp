@@ -1,0 +1,153 @@
+﻿,Cat Number,Category Name,Sub cat number,Sub-Category name
+1,01,"Beer, Cider, Alchohol free & ready to drink",1001,Alcohol free and Low alcohol
+,,,1002,Ales and Bitters
+,,,1003,Beer & lager
+,,,1004,Cider
+,,,1005,Ready to drink
+,,,,
+2,02,Wine ,2001,White Wine
+,,,2002,Red Wine
+,,,2003,Rose Wine
+,,,2004,"Prosecco, Champagne & sparkling Wine"
+,,,2005,"Port,Sherry, Vermouth & Fortified Wine"
+,,,2006,Alcohol Free and low Alcohol Wine
+,,,,
+,,,2007,Perry
+3,03,Spirits,3001,Gin
+,,,3002,Whisky
+,,,3003,Vodka
+,,,3004,Rum
+,,,3005,Brandy & Cognac
+,,,3006,"Tequila, Liqueurs & Aperitifs"
+,,,,
+4,04,Soft Drink,4001,Fizzy  Drinks
+,,,4002,Juices
+,,,4003,Energy Drinks
+,,,4004,Milkshakes
+,,,4005,Squash & Cordial
+,,,4006,Tonic & Mixers
+,,,4007,Ethnic Drinks
+,,,4008,Cold Beverages
+,,,,
+5,05,Water,5001,Still water
+,,,5002,Sprakling Water
+,,,5003,Flavoured  Water
+,,,,
+6,06,Hot  Drinks,6001,Tea
+,,,6002,Coffe
+,,,6003,Hot chocolate & Malted Drinks
+,,,,
+7,07,Tobbaco & Vapes,7001,Cigarettes
+,,,7002,Cigars
+,,,7003,Rolling Tobacco
+,,,7004,Vapes & refills
+,,,7005,Cigarette Papers & lighters
+,,,7006,Snuff
+,,,,
+8,08,Biscuits,8001,Biscuites
+,,,8002,Cookies
+,,,8003,Crackers
+,,,8004,Continental Biscuites
+,,,,
+9,09,Cereals & Cereal bar,9001,Cereals
+,,,9002,"Bran, Oat & Flake Cereal"
+,,,9003,Granola
+,,,9004,Cereal Bars & Protein Bars
+,,,,
+10,10,Confectionery,10001,Chocolates
+,,,10002,Chocolate boxes
+,,,10003,Chewing Gum
+,,,10004,Mint
+,,,10005,Sweet Bags
+,,,10006,Seasonal
+,,,,
+11,11,Bread & Cakes,11001,Bread
+,,,11002,Cakes & Tart
+,,,11003,Morning Goods
+,,,,
+12,12,Crisps and snacks,12001,Crisp
+,,,12002,Dips
+,,,12003,Nuts
+,,,12004,Popcorn
+,,,12005,Snacks & Nuts
+,,,,
+13,13,Pet Food,13001,Cat
+,,,13002,Dog
+,,,,
+14,14,"Hosehold, Cleaning & Paper",14001,Air Freshener
+,,,14002,Cleaning
+,,,14003,Cleaning Professional
+,,,14004,Cleaning Tools & Gloves
+,,,14005,Dishwasher & Washing Up
+,,,14006,Dishwasher & Wash Up Professional
+,,,14007,Hygiene Products
+,,,14008,Laundry
+,,,14009,Toilet Roll
+,,,14010,Kitchen Accessories
+,,,14011,Facial tissue & Hand Wipes
+,,,14012,"Polishes, Waxes & Pest Control"
+,,,,
+15,15,Non-Food and stationery,15001,Batteries
+,,,15002,Carded Range
+,,,15003,Coal/ Charcoal
+,,,15004,Stationery
+,,,15005,Food & Drink Disposable
+,,,15006,Diy hardwares
+,,,,
+16,16,"Health, Beauty & Baby Products",16001,Baby food & Drinks
+,,,16002,"Bath, Shower, Soap"
+,,,16003,Beauty & Skincare
+,,,16004,Contraception
+,,,16005,Dental Care
+,,,16006,Feminine Hygine
+,,,16007,Haircare
+,,,16008,Medicines & Healthcare
+,,,16009,Men's Toiletries
+,,,16010,Nappies & Baby Toiletries
+,,,16011,Women's Toiletries
+,,,,
+18,18,Grocery,18001,Baking Ingredients 
+,,,18002,Cooking Ingredients
+,,,18003,Cooking sauce & Pasta
+,,,18004,Desserts
+,,,18005,Dried Veg Rice & Pulses
+,,,18006,Gravy & Stock 
+,,,18007,Instant noodles & Meals
+,,,18008,"Jam, Honey , Spread"
+,,,18009,Ketch up and Sauce
+,,,18010,Oil & Ghee
+,,,18011,"Pickle , Chutney & Olives"
+,,,18012,"Salt, herb & Spices"
+,,,18013,Sugar & Syrup
+,,,18014,Tinned Food
+,,,18015,Sport & Nutrition
+,,,18016,Soup
+,,,,
+19,19,Catering & Ethnic,19001,Spices
+,,,19002,Grains
+,,,19003,Rice
+,,,19004,Flour
+,,,18010,Oil & Ghee
+,,,19006,Chutney & Sauces
+,,,12005,Snack & Nuts
+,,,15005,Food & Drink Disposable
+,,,14003,Cleaning Professional
+,,,14004,Cleaning Tools & Gloves
+,,,14006,Dishwasher & Wash Up Professional
+,,,4007,Ethnic Drinks
+,,,8004,Continental Biscuites
+,,,20011,Indian Frozen
+,,,15003,Coal/ Charcoal
+,,,,
+,,,,
+20,20,Chilled & Frozen,20001,Bread Pizza & Snack
+,,,20002,Frozen vegetables 
+,,,20003,Ice Cream
+,,,20004,Ready Meal
+,,,20005,Ice Cube
+,,,20006,Desserts & Gateaux
+,,,20007,Meat & Poultry
+,,,20008,Patatoes & sides
+,,,20009,Milk 
+,,,20010,Yogurt and Cream
+,,,20011,Indian Frozen

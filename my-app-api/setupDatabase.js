@@ -8,7 +8,7 @@ const setupTables = async () => {
   try {
     // Drop tables
     await client.query(`
-      DROP TABLE IF EXISTS product_pricing, product_barcodes, products, order_lines, orders, customers, users;
+      DROP TABLE IF EXISTS product_pricing, product_barcodes, products, order_lines, orders, customers, users, subcategories, categories;
     `);
     console.log("Dropped old tables.");
 
@@ -48,6 +48,25 @@ const setupTables = async () => {
     `);
     console.log("Created 'customers' table.");
 
+    // CATEGORIES TABLE
+    await client.query(`
+      CREATE TABLE categories (
+        id INTEGER PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL
+      );
+    `);
+    console.log("Created 'categories' table.");
+
+    // SUBCATEGORIES TABLE
+    await client.query(`
+      CREATE TABLE subcategories (
+        id INTEGER PRIMARY KEY,
+        category_id INTEGER NOT NULL REFERENCES categories(id),
+        name VARCHAR(255) UNIQUE NOT NULL
+      );
+    `);
+    console.log("Created 'subcategories' table.");
+
     // PRODUCTS TABLE (based on CSV)
     await client.query(`
       CREATE TABLE products (
@@ -56,6 +75,8 @@ const setupTables = async () => {
         vat VARCHAR(10),
         hierarchy1 INTEGER,
         hierarchy2 INTEGER,
+        category_id INTEGER REFERENCES categories(id),
+        subcategory_id INTEGER REFERENCES subcategories(id),
         description TEXT,
         pack_description TEXT,
         qty_in_stock INTEGER,
