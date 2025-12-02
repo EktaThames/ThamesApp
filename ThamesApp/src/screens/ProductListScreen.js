@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
@@ -76,12 +76,13 @@ export default function ProductListScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.searchContainer}>
+          <Icon name="search-outline" size={20} color="#6c757d" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search by name or SKU..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholderTextColor="#888"
+            placeholderTextColor="#6c757d"
           />
           <TouchableOpacity style={styles.barcodeButton} onPress={() => alert('Barcode scanner coming soon!')}>
             <Icon name="camera-outline" size={24} color="#495057" />
@@ -89,7 +90,9 @@ export default function ProductListScreen({ navigation }) {
         </View>
       </View>
       {loading ? (
-        <Text style={styles.loadingText}>Loading products...</Text>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1d3557" />
+        </View>
       ) : (
         <FlatList
           data={filteredProducts}
@@ -126,10 +129,6 @@ export default function ProductListScreen({ navigation }) {
                         <Text style={styles.detailValue}>{formatPrice(item.rrp)}</Text>
                       </View>
                       <View style={styles.detailItem}>
-                        <Text style={styles.detailLabel}>POR</Text>
-                      <Text style={styles.detailValue}>{!isNaN(parseFloat(item.por)) ? `${parseFloat(item.por).toFixed(2)}%` : 'N/A'}</Text>
-                      </View>
-                      <View style={styles.detailItem}>
                         <Text style={styles.detailLabel}>VAT</Text>
                         <Text style={styles.detailValue}>{item.vat || 'N/A'}</Text>
                       </View>
@@ -138,7 +137,10 @@ export default function ProductListScreen({ navigation }) {
                     {item.pricing?.map(tier => (
                       <View key={tier.tier} style={styles.tierRow}>
                         <View style={styles.tierInfo}>
-                          <Text style={styles.tierPack}>{tier.pack_size || `Pack ${tier.tier}`}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Text style={styles.tierPack}>{tier.pack_size || `Pack ${tier.tier}`}</Text>
+                            <Text style={styles.porText}>{!isNaN(parseFloat(item.por)) ? ` | POR: ${parseFloat(item.por).toFixed(2)}%` : ''}</Text>
+                          </View>
                           {tier.promo_price ? (
                             <View style={{flexDirection: 'row', alignItems: 'center'}}>
                               <Text style={styles.promoPrice}>{formatPrice(tier.promo_price)}</Text>
@@ -171,6 +173,12 @@ export default function ProductListScreen({ navigation }) {
               </TouchableOpacity>
             );
           }}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No products found.</Text>
+            </View>
+          )}
+          contentContainerStyle={{ paddingBottom: 100 }} // Padding to not hide last item behind cart total
         />
       )}
 
@@ -186,11 +194,14 @@ export default function ProductListScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  loadingText: {
+  loadingContainer: {
     flex: 1,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    fontSize: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa', // A slightly lighter, cleaner background
   },
   header: {
     backgroundColor: 'white',
@@ -201,14 +212,17 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f4f5f7',
+    backgroundColor: '#f1f3f5',
     borderRadius: 10,
     height: 44,
+  },
+  searchIcon: {
+    marginLeft: 12,
   },
   searchInput: {
     flex: 1,
     height: '100%',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     fontSize: 16,
     color: '#1d3557',
   },
@@ -218,13 +232,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  container: {
-    flex: 1,
-    backgroundColor: '#f4f5f7',
-  },
   card: {
     backgroundColor: 'white',
-    borderRadius: 8,
+    borderRadius: 12, // Slightly more rounded corners
     marginVertical: 8,
     marginHorizontal: 16,
     shadowColor: '#000',
@@ -246,7 +256,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1d3557',
+    color: '#212529', // Standard dark text for better readability
   },
   sku: {
     fontSize: 12,
@@ -259,7 +269,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2a9d8f',
+    color: '#2a9d8f', // Use accent color for price
   },
   stock: {
     fontSize: 12,
@@ -270,7 +280,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
     borderTopWidth: 1,
-    borderTopColor: '#f0f2f5',
+    borderTopColor: '#f1f3f5',
     marginTop: 10,
   },
   detailsGrid: {
@@ -279,20 +289,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f2f5',
+    borderBottomColor: '#f1f3f5',
   },
   detailItem: {
     alignItems: 'center',
   },
   detailLabel: {
     fontSize: 12,
-    color: '#666',
+    color: '#6c757d',
     marginBottom: 2,
   },
   detailValue: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#1d3557',
+    color: '#212529',
   },
   sectionTitle: {
     fontSize: 16,
@@ -306,16 +316,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f2f5',
   },
   tierInfo: {
     flex: 1,
   },
   tierPack: {
     fontSize: 14,
-    color: '#333',
+    color: '#212529',
     fontWeight: '500',
+  },
+  porText: {
+    fontSize: 12,
+    color: '#2a9d8f', // Use the app's accent color
+    fontWeight: 'bold',
   },
   normalPrice: {
     fontSize: 14,
@@ -339,9 +352,9 @@ const styles = StyleSheet.create({
   },
   quantityButton: {
     backgroundColor: '#2a9d8f',
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18, // Circular buttons
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -353,7 +366,7 @@ const styles = StyleSheet.create({
   quantityValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1d3557',
+    color: '#212529',
     marginHorizontal: 12,
     minWidth: 20,
     textAlign: 'center',
@@ -379,5 +392,15 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  emptyContainer: {
+    flex: 1,
+    marginTop: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6c757d',
   },
 });
