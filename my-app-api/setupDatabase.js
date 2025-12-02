@@ -75,8 +75,6 @@ const setupTables = async () => {
         vat VARCHAR(10),
         hierarchy1 INTEGER,
         hierarchy2 INTEGER,
-        category_id INTEGER REFERENCES categories(id),
-        subcategory_id INTEGER REFERENCES subcategories(id),
         description TEXT,
         pack_description TEXT,
         qty_in_stock INTEGER,

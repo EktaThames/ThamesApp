@@ -100,14 +100,14 @@ async function importProducts() {
       const productResult = await db.query(
         `
           INSERT INTO products
-          (item, vat, category_id, subcategory_id, description, pack_description,
+          (item, vat, hierarchy1, hierarchy2, description, pack_description,
            qty_in_stock, cases_in_stock, max_order, rrp, por, pmp_plain, type)
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
           ON CONFLICT (item)
           DO UPDATE SET
             vat = EXCLUDED.vat,
-            category_id = EXCLUDED.category_id,
-            subcategory_id = EXCLUDED.subcategory_id,
+            hierarchy1 = EXCLUDED.hierarchy1,
+            hierarchy2 = EXCLUDED.hierarchy2,
             description = EXCLUDED.description,
             pack_description = EXCLUDED.pack_description,
             qty_in_stock = EXCLUDED.qty_in_stock,
