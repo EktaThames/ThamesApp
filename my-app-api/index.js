@@ -5,6 +5,7 @@ const cors = require('cors');
 
 const authRoutes = require('./routes/auth');       // Auth routes
 const productRoutes = require('./routes/products'); // Products routes
+const categoryRoutes = require('./routes/categories'); // Category routes
 const db = require('./db');                 // Database connection
 
 const app = express();
@@ -31,6 +32,7 @@ app.get('/', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);         // Auth endpoints: register/login
 app.use('/api/products', productRoutes); // Products endpoints: list/get products
+app.use('/api/categories', categoryRoutes); // Category endpoints
 
 // Fallback route for 404
 app.use((req, res) => {

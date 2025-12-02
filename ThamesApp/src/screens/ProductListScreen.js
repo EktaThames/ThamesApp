@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Modal, ScrollView, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
@@ -11,10 +11,23 @@ export default function ProductListScreen({ navigation }) {
   const [cart, setCart] = useState({}); // { productId: { product, quantity } }
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredProducts, setFilteredProducts] = useState([]);
+  const [isFilterVisible, setFilterVisible] = useState(false);
+
+  // State for filter options
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [activeFilters, setActiveFilters] = useState({
+    categories: [],
+    subcategories: [],
+    pmp: false,
+    promotion: false,
+  });
 
   // Helper to format price
   const formatPrice = (price) => {
     const numericPrice = parseFloat(price);
+    // Guard against null/undefined values before calling toFixed()
+    if (isNaN(numericPrice)) return 'N/A';
     return isNaN(numericPrice) ? 'N/A' : `£${numericPrice.toFixed(2)}`;
   };
 
@@ -56,24 +69,165 @@ export default function ProductListScreen({ navigation }) {
         console.log(err);
         setLoading(false);
       });
+
+    // Fetch categories for filter
+    fetch(`${API_URL}/api/categories`)
+      .then(res => res.json())
+      .then(setCategories)
+      .catch(err => console.log('Error fetching categories:', err));
+
+    // Fetch subcategories for filter
+    fetch(`${API_URL}/api/categories/sub`)
+      .then(res => res.json())
+      .then(setSubcategories)
+      .catch(err => console.log('Error fetching subcategories:', err));
+
   }, []);
 
   // Effect to handle filtering when search query changes
   useEffect(() => {
-    if (searchQuery === '') {
+    const noFiltersApplied =
+      searchQuery === '' &&
+      activeFilters.categories.length === 0 &&
+      activeFilters.subcategories.length === 0 &&
+      !activeFilters.pmp &&
+      !activeFilters.promotion;
+
+    if (noFiltersApplied) {
       setFilteredProducts(products);
     } else {
-      const lowercasedQuery = searchQuery.toLowerCase();
-      const filtered = products.filter(product => 
-        product.description.toLowerCase().includes(lowercasedQuery) ||
-        product.item.toLowerCase().includes(lowercasedQuery)
-      );
+      let filtered = [...products];
+
+      // Apply search query
+      if (searchQuery) {
+        const lowercasedQuery = searchQuery.toLowerCase();
+        filtered = filtered.filter(product => 
+          (product.description && product.description.toLowerCase().includes(lowercasedQuery)) ||
+          (product.item && product.item.toLowerCase().includes(lowercasedQuery))
+        );
+      }
+
+      // Apply category filter (multi-select)
+      if (activeFilters.categories.length > 0) {
+        filtered = filtered.filter(p => activeFilters.categories.includes(p.hierarchy1));
+      }
+      // Apply subcategory filter (multi-select)
+      if (activeFilters.subcategories.length > 0) {
+        filtered = filtered.filter(p => activeFilters.subcategories.includes(p.hierarchy2));
+      }
+      // Apply PMP filter
+      if (activeFilters.pmp) {
+        filtered = filtered.filter(p => p.pmp_plain === 'PMP');
+      }
+      // Apply Promotion filter
+      if (activeFilters.promotion) {
+        filtered = filtered.filter(p => p.pricing && p.pricing.some(tier => tier.promo_price));
+      }
+
       setFilteredProducts(filtered);
     }
-  }, [searchQuery, products]);
+  }, [searchQuery, products, activeFilters]);
+
+  const handleCategoryToggle = (catId) => {
+    setActiveFilters(prev => {
+      const newCategories = prev.categories.includes(catId)
+        ? prev.categories.filter(id => id !== catId)
+        : [...prev.categories, catId];
+      
+      // Also remove subcategories that don't belong to the remaining selected categories
+      const newSubcategories = prev.subcategories.filter(subId => {
+        const sub = subcategories.find(s => s.id === subId);
+        return sub && newCategories.includes(sub.category_id);
+      });
+
+      return { ...prev, categories: newCategories, subcategories: newSubcategories };
+    });
+  };
+
+  const handleSubcategoryToggle = (subId) => {
+    setActiveFilters(prev => ({
+      ...prev,
+      subcategories: prev.subcategories.includes(subId)
+        ? prev.subcategories.filter(id => id !== subId)
+        : [...prev.subcategories, subId],
+    }));
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <>
+      {/* FILTER MODAL */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isFilterVisible}
+        onRequestClose={() => setFilterVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Filters</Text>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+                  {/* PMP and Promotion Toggles */}
+                  <View style={styles.toggleContainer}>
+                    <TouchableOpacity 
+                      style={[styles.toggleButton, activeFilters.pmp && styles.toggleActive]}
+                      onPress={() => setActiveFilters(f => ({...f, pmp: !f.pmp}))}
+                    >
+                      <Text style={[styles.toggleText, activeFilters.pmp && styles.toggleActiveText]}>PMP</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.toggleButton, activeFilters.promotion && styles.toggleActive]}
+                      onPress={() => setActiveFilters(f => ({...f, promotion: !f.promotion}))}
+                    >
+                      <Text style={[styles.toggleText, activeFilters.promotion && styles.toggleActiveText]}>Promotion</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Category Filter */}
+                  <Text style={styles.filterSectionTitle}>Category</Text>
+                  <View style={styles.chipContainer}>
+                    {categories.map(cat => (
+                      <TouchableOpacity 
+                        key={cat.id} 
+                        style={[styles.chip, activeFilters.categories.includes(cat.id) && styles.chipActive]}
+                        onPress={() => handleCategoryToggle(cat.id)}
+                      >
+                        <Text style={[styles.chipText, activeFilters.categories.includes(cat.id) && styles.chipActiveText]}>{cat.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* Subcategory Filter */}
+                  {activeFilters.categories.length > 0 && (
+                    <>
+                      <Text style={styles.filterSectionTitle}>Sub-category</Text>
+                      <View style={styles.chipContainer}>
+                        {subcategories
+                          .filter(sub => activeFilters.categories.includes(sub.category_id))
+                          .map(sub => (
+                            <TouchableOpacity 
+                              key={sub.id} 
+                              style={[styles.chip, activeFilters.subcategories.includes(sub.id) && styles.chipActive]} 
+                              onPress={() => handleSubcategoryToggle(sub.id)}
+                            >
+                              <Text style={[styles.chipText, activeFilters.subcategories.includes(sub.id) && styles.chipActiveText]}>{sub.name}</Text>
+                            </TouchableOpacity>
+                          ))}
+                      </View>
+                    </>
+                  )}
+                </ScrollView>
+                <TouchableOpacity style={styles.closeButton} onPress={() => setFilterVisible(false)}>
+                  <Text style={styles.closeButtonText}>Apply Filters</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.searchContainer}>
           <Icon name="search-outline" size={20} color="#6c757d" style={styles.searchIcon} />
@@ -86,6 +240,9 @@ export default function ProductListScreen({ navigation }) {
           />
           <TouchableOpacity style={styles.barcodeButton} onPress={() => alert('Barcode scanner coming soon!')}>
             <Icon name="camera-outline" size={24} color="#495057" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.filterButton} onPress={() => setFilterVisible(true)}>
+            <Icon name="options-outline" size={24} color="#495057" />
           </TouchableOpacity>
         </View>
       </View>
@@ -126,7 +283,7 @@ export default function ProductListScreen({ navigation }) {
                     <View style={styles.detailsGrid}>
                       <View style={styles.detailItem}>
                         <Text style={styles.detailLabel}>RRP</Text>
-                        <Text style={styles.detailValue}>{formatPrice(item.rrp)}</Text>
+                        <Text style={styles.detailValue}>{formatPrice(item.rrp)}</Text> 
                       </View>
                       <View style={styles.detailItem}>
                         <Text style={styles.detailLabel}>VAT</Text>
@@ -190,6 +347,7 @@ export default function ProductListScreen({ navigation }) {
         </View>
       )}
     </SafeAreaView>
+    </>
   );
 }
 
@@ -227,6 +385,12 @@ const styles = StyleSheet.create({
     color: '#1d3557',
   },
   barcodeButton: {
+    paddingHorizontal: 12,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterButton: {
     paddingHorizontal: 12,
     height: '100%',
     justifyContent: 'center',
@@ -402,5 +566,91 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#6c757d',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    height: '100%',
+    width: '85%',
+    position: 'absolute',
+    right: 0,
+    backgroundColor: 'white',
+    paddingTop: 50, // Safe area for status bar
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#1d3557',
+    marginBottom: 20,
+  },
+  filterSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1d3557',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  toggleButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ced4da',
+  },
+  toggleActive: {
+    backgroundColor: '#1d3557',
+    borderColor: '#1d3557',
+  },
+  toggleText: {
+    color: '#495057',
+    fontWeight: '500',
+  },
+  toggleActiveText: {
+    color: 'white',
+  },
+  chipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  chip: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#f1f3f5',
+    margin: 5,
+  },
+  chipActive: {
+    backgroundColor: '#2a9d8f',
+  },
+  chipText: {
+    color: '#495057',
+  },
+  chipActiveText: {
+    color: 'white',
+  },
+  closeButton: {
+    backgroundColor: '#2a9d8f',
+    borderRadius: 12,
+    alignItems: 'center',
+    padding: 16,
+    marginTop: 'auto', // Pushes button to the bottom
+  },
+  closeButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
