@@ -8,7 +8,7 @@ const setupTables = async () => {
   try {
     // Drop tables
     await client.query(`
-      DROP TABLE IF EXISTS product_pricing, product_barcodes, products, order_lines, orders, customers, users, subcategories, categories;
+      DROP TABLE IF EXISTS product_pricing, product_barcodes, products, order_lines, orders, customers, users, subcategories, categories, brands;
     `);
     console.log("Dropped old tables.");
 
@@ -67,12 +67,22 @@ const setupTables = async () => {
     `);
     console.log("Created 'subcategories' table.");
 
+    // BRANDS TABLE
+    await client.query(`
+      CREATE TABLE brands (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL
+      );
+    `);
+    console.log("Created 'brands' table.");
+
     // PRODUCTS TABLE (based on CSV)
     await client.query(`
       CREATE TABLE products (
         id SERIAL PRIMARY KEY,
         item VARCHAR(50) UNIQUE NOT NULL,
         vat VARCHAR(10),
+        brand_id INTEGER REFERENCES brands(id),
         hierarchy1 INTEGER,
         hierarchy2 INTEGER,
         description TEXT,

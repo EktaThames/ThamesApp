@@ -40,6 +40,10 @@ async function importProducts() {
     const subcategoryResult = await db.query('SELECT id FROM subcategories');
     const validSubcategoryIds = new Set(subcategoryResult.rows.map(r => r.id));
 
+    // Pre-fetch all brands for quick lookups
+    const brandsResult = await db.query('SELECT id, name FROM brands');
+    const brandMap = new Map(brandsResult.rows.map(b => [b.name.toLowerCase(), b.id]));
+
     console.log(`Found ${validCategoryIds.size} valid categories and ${validSubcategoryIds.size} valid subcategories.`);
 
     for (const row of rows) {
@@ -49,6 +53,7 @@ async function importProducts() {
         hierarchy1,
         hierarchy2,
         description,
+        Brand, // This was missing
         pack_description,
         qty_in_stock,
         cases_in_stock,
@@ -93,6 +98,9 @@ async function importProducts() {
       const subcategoryId = cleanInt(hierarchy2);
       const finalCategoryId = validCategoryIds.has(categoryId) ? categoryId : null;
       const finalSubcategoryId = validSubcategoryIds.has(subcategoryId) ? subcategoryId : null;
+      
+      // Look up brand ID
+      const brandId = Brand && brandMap.has(Brand.toLowerCase()) ? brandMap.get(Brand.toLowerCase()) : null;
 
       // ---------------------------------------------
       // UPSERT PRODUCT
@@ -100,12 +108,13 @@ async function importProducts() {
       const productResult = await db.query(
         `
           INSERT INTO products
-          (item, vat, hierarchy1, hierarchy2, description, pack_description,
+          (item, vat, brand_id, hierarchy1, hierarchy2, description, pack_description,
            qty_in_stock, cases_in_stock, max_order, rrp, por, pmp_plain, type)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
           ON CONFLICT (item)
           DO UPDATE SET
             vat = EXCLUDED.vat,
+            brand_id = EXCLUDED.brand_id,
             hierarchy1 = EXCLUDED.hierarchy1,
             hierarchy2 = EXCLUDED.hierarchy2,
             description = EXCLUDED.description,
@@ -122,6 +131,7 @@ async function importProducts() {
         [
           cleanInt(item),
           VAT,
+          brandId,
           finalCategoryId,
           finalSubcategoryId,
           description,

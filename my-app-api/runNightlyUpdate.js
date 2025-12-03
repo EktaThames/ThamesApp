@@ -1,11 +1,13 @@
 // runNightlyUpdate.js
 const { importProducts } = require('./import/importProducts');
 const { importCategories } = require('./utils/importCategories');
+const { importBrands } = require('./utils/importBrands');
 const db = require('./db');
 
 const runUpdate = async () => {
   try {
     console.log('--- Starting Nightly Update ---');
+    await importBrands();
     await importCategories();
     await importProducts();
     // In the future, you could add other nightly tasks here.

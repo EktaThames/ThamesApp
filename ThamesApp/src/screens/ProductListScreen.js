@@ -4,10 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
 
-export default function ProductListScreen({ navigation }) {
+export default function ProductListScreen({ navigation, route }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedProductId, setExpandedProductId] = useState(null);
+  const [expandedProductId, setExpandedProductId] = useState(route.params?.expandedProductId || null);
   const [cart, setCart] = useState({}); // { productId: { product, quantity } }
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -16,9 +16,13 @@ export default function ProductListScreen({ navigation }) {
   // State for filter options
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+  // const [sizeOptions, setSizeOptions] = useState([]);
   const [activeFilters, setActiveFilters] = useState({
     categories: [],
     subcategories: [],
+    brands: [],
+    // sizes: [],
     pmp: false,
     promotion: false,
   });
@@ -63,6 +67,9 @@ export default function ProductListScreen({ navigation }) {
       .then(data => {
         setProducts(data);
         setFilteredProducts(data);
+        // Extract unique sizes from products for the filter options
+        // const uniqueSizes = [...new Set(data.map(p => p.pack_description).filter(Boolean))];
+        // setSizeOptions(uniqueSizes.sort());
         setLoading(false);
       })
       .catch(err => {
@@ -73,16 +80,42 @@ export default function ProductListScreen({ navigation }) {
     // Fetch categories for filter
     fetch(`${API_URL}/api/categories`)
       .then(res => res.json())
-      .then(setCategories)
+      .then(data => {
+        if (Array.isArray(data)) {
+          setCategories(data);
+        }
+      })
       .catch(err => console.log('Error fetching categories:', err));
 
     // Fetch subcategories for filter
     fetch(`${API_URL}/api/categories/sub`)
       .then(res => res.json())
-      .then(setSubcategories)
+      .then(data => {
+        if (Array.isArray(data)) {
+          setSubcategories(data);
+        }
+      })
       .catch(err => console.log('Error fetching subcategories:', err));
 
+    // Fetch brands for filter
+    fetch(`${API_URL}/api/brands`)
+      .then(res => res.json())
+      .then(data => {
+        // Ensure we only set an array to the state
+        if (Array.isArray(data)) {
+          setBrands(data);
+        }
+      })
+      .catch(err => console.log('Error fetching brands:', err));
+
   }, []);
+
+  // Effect to handle expanding a product when navigated to from another screen
+  useEffect(() => {
+    if (route.params?.expandedProductId) {
+      setExpandedProductId(route.params.expandedProductId);
+    }
+  }, [route.params?.expandedProductId]);
 
   // Effect to handle filtering when search query changes
   useEffect(() => {
@@ -90,6 +123,8 @@ export default function ProductListScreen({ navigation }) {
       searchQuery === '' &&
       activeFilters.categories.length === 0 &&
       activeFilters.subcategories.length === 0 &&
+      activeFilters.brands.length === 0 &&
+      // activeFilters.sizes.length === 0 &&
       !activeFilters.pmp &&
       !activeFilters.promotion;
 
@@ -115,6 +150,14 @@ export default function ProductListScreen({ navigation }) {
       if (activeFilters.subcategories.length > 0) {
         filtered = filtered.filter(p => activeFilters.subcategories.includes(p.hierarchy2));
       }
+      // Apply brand filter (multi-select)
+      if (activeFilters.brands.length > 0) {
+        filtered = filtered.filter(p => activeFilters.brands.includes(p.brand_id));
+      }
+      // // Apply size filter (multi-select)
+      // if (activeFilters.sizes.length > 0) {
+      //   filtered = filtered.filter(p => activeFilters.sizes.includes(p.pack_description));
+      // }
       // Apply PMP filter
       if (activeFilters.pmp) {
         filtered = filtered.filter(p => p.pmp_plain === 'PMP');
@@ -153,6 +196,34 @@ export default function ProductListScreen({ navigation }) {
     }));
   };
 
+  const handleBrandToggle = (brandId) => {
+    setActiveFilters(prev => ({
+      ...prev,
+      brands: prev.brands.includes(brandId)
+        ? prev.brands.filter(id => id !== brandId)
+        : [...prev.brands, brandId],
+    }));
+  };
+
+  const handleClearFilters = () => {
+    setActiveFilters({
+      categories: [],
+      subcategories: [],
+      brands: [],
+      pmp: false,
+      promotion: false,
+    });
+  };
+
+  // const handleSizeToggle = (size) => {
+  //   setActiveFilters(prev => ({
+  //     ...prev,
+  //     sizes: prev.sizes.includes(size)
+  //       ? prev.sizes.filter(s => s !== size)
+  //       : [...prev.sizes, size],
+  //   }));
+  // };
+
   return (
     <>
       {/* FILTER MODAL */}
@@ -166,7 +237,12 @@ export default function ProductListScreen({ navigation }) {
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Filters</Text>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Filters</Text>
+                  <TouchableOpacity onPress={handleClearFilters}>
+                    <Text style={styles.clearButtonText}>Clear All</Text>
+                  </TouchableOpacity>
+                </View>
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
                   {/* PMP and Promotion Toggles */}
                   <View style={styles.toggleContainer}>
@@ -217,6 +293,35 @@ export default function ProductListScreen({ navigation }) {
                       </View>
                     </>
                   )}
+
+                  {/* Brand Filter */}
+                  <Text style={styles.filterSectionTitle}>Brand</Text>
+                  <View style={styles.chipContainer}>
+                    {brands && brands.map(brand => (
+                      <TouchableOpacity 
+                        key={brand.id} 
+                        style={[styles.chip, activeFilters.brands.includes(brand.id) && styles.chipActive]}
+                        onPress={() => handleBrandToggle(brand.id)}
+                      >
+                        <Text style={[styles.chipText, activeFilters.brands.includes(brand.id) && styles.chipActiveText]}>{brand.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* {/* Size Filter */}
+                  {/* <Text style={styles.filterSectionTitle}>Size</Text> */}
+                  {/* <View style={styles.chipContainer}> */}
+                    {/* {sizeOptions.map(size => ( */}
+                      {/* <TouchableOpacity  */}
+                        {/* key={size}  */}
+                        {/* style={[styles.chip, activeFilters.sizes.includes(size) && styles.chipActive]} */}
+                        {/* onPress={() => handleSizeToggle(size)} */}
+                      {/* > */}
+                        {/* <Text style={[styles.chipText, activeFilters.sizes.includes(size) && styles.chipActiveText]}>{size}</Text> */}
+                      {/* </TouchableOpacity> */}
+                    {/* ))} */}
+                  {/* </View> */}
+
                 </ScrollView>
                 <TouchableOpacity style={styles.closeButton} onPress={() => setFilterVisible(false)}>
                   <Text style={styles.closeButtonText}>Apply Filters</Text>
@@ -586,11 +691,21 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 10,
   },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   modalTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     color: '#1d3557',
-    marginBottom: 20,
+  },
+  clearButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#e63946',
   },
   filterSectionTitle: {
     fontSize: 18,
