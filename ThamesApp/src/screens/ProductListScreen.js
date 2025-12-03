@@ -112,10 +112,14 @@ export default function ProductListScreen({ navigation, route }) {
 
   // Effect to handle expanding a product when navigated to from another screen
   useEffect(() => {
-    if (route.params?.expandedProductId) {
-      setExpandedProductId(route.params.expandedProductId);
+    const { expandedProductId, activeFilters: incomingFilters } = route.params || {};
+    if (expandedProductId) {
+      setExpandedProductId(expandedProductId);
     }
-  }, [route.params?.expandedProductId]);
+    if (incomingFilters) {
+      setActiveFilters(incomingFilters);
+    }
+  }, [route.params]);
 
   // Effect to handle filtering when search query changes
   useEffect(() => {
