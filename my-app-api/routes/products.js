@@ -33,9 +33,11 @@ router.get('/', async (req, res) => {
           promo_start: p.promo_start,
           promo_end: p.promo_end,
         }));
+      const imageUrl = `${process.env.IMAGE_BASE_URL}/${product.item}.webp`;
 
       return {
         ...product,
+        image_url: imageUrl,
         barcodes: productBarcodes,
         pricing: productPricing,
       };
@@ -80,4 +82,3 @@ router.get('/:id', async (req, res) => {
 });
 
 module.exports = router;
-

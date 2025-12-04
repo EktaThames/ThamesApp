@@ -10,6 +10,7 @@ export default function HomeScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [imageErrors, setImageErrors] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,6 +50,10 @@ export default function HomeScreen({ navigation }) {
     return 'pricetag-outline';
   };
 
+  const handleImageError = (sku) => {
+    setImageErrors(prev => ({ ...prev, [sku]: true }));
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
@@ -74,9 +79,13 @@ export default function HomeScreen({ navigation }) {
               showsHorizontalScrollIndicator={false}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.productCard} onPress={() => navigation.navigate('ProductList', { expandedProductId: item.id })}>
-                  <View style={styles.productImagePlaceholder}>
-                    <Icon name="image-outline" size={40} color="#ced4da" />
-                  </View>
+                  {imageErrors[item.item] ? (
+                    <View style={styles.productImagePlaceholder}>
+                      <Icon name="image-outline" size={40} color="#ced4da" />
+                    </View>
+                  ) : (
+                    <Image source={{ uri: item.image_url }} style={styles.productImage} onError={() => handleImageError(item.item)} />
+                  )}
                   <View style={styles.productInfo}>
                     <Text style={styles.productName} numberOfLines={2}>{item.description}</Text>
                     <Text style={styles.productSize} numberOfLines={1}>{item.pack_description}</Text>
@@ -238,11 +247,18 @@ const styles = StyleSheet.create({
   productImagePlaceholder: {
     width: '100%',
     height: 100,
-    backgroundColor: '#e9ecef',
-    borderRadius: 8,
-    marginBottom: 8,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  productImage: {
+    width: '100%',
+    height: 100,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    backgroundColor: '#f8f9fa', // A fallback color
   },
   productInfo: {
     padding: 12,

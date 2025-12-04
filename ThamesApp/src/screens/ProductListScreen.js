@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Modal, ScrollView, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Modal, ScrollView, TouchableWithoutFeedback, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
@@ -372,6 +372,7 @@ export default function ProductListScreen({ navigation, route }) {
               >
                 {/* Collapsed View */}
                 <View style={styles.collapsedContainer}>
+                  <Image source={{ uri: item.image_url }} style={styles.productImage} />
                   <View style={styles.infoContainer}>
                     <Text style={styles.name} numberOfLines={2}>{item.description}</Text>
                     <Text style={styles.sku}>
@@ -515,6 +516,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  productImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 16,
+    backgroundColor: '#f8f9fa',
   },
   collapsedContainer: {
     flexDirection: 'row',
