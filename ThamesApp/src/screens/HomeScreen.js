@@ -1,6 +1,6 @@
 // Inside HomeScreen.js
 import React, { useEffect, useState } from 'react';
-import { View, Button, StyleSheet, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
+import { View, Button, StyleSheet, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
@@ -8,24 +8,30 @@ import { API_URL } from '../config/api';
 export default function HomeScreen({ navigation }) {
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productsRes, categoriesRes] = await Promise.all([
+        const [productsRes, categoriesRes, subcategoriesRes] = await Promise.all([
           fetch(`${API_URL}/api/products`),
-          fetch(`${API_URL}/api/categories`)
+          fetch(`${API_URL}/api/categories`),
+          fetch(`${API_URL}/api/categories/sub`)
         ]);
 
         const productsData = await productsRes.json();
         const categoriesData = await categoriesRes.json();
+        const subcategoriesData = await subcategoriesRes.json();
 
         if (Array.isArray(productsData)) {
           setTrendingProducts(productsData.slice(0, 10));
         }
         if (Array.isArray(categoriesData)) {
           setCategories(categoriesData);
+        }
+        if (Array.isArray(subcategoriesData)) {
+          setSubcategories(subcategoriesData);
         }
       } catch (err) {
         console.error("Error fetching home screen data:", err);
@@ -37,48 +43,23 @@ export default function HomeScreen({ navigation }) {
     fetchData();
   }, []);
 
+  // Helper function to get a relevant icon for each subcategory
+  const getIconForSubcategory = (name) => {
+    // Return a single, consistent icon for all subcategories
+    return 'pricetag-outline';
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
-        <View style={styles.sliderContainer}>
-          <View style={styles.bannerPlaceholder}>
-            <Text style={styles.bannerPlaceholderText}>Banner Placeholder</Text>
-          </View>
-        </View>
-
-        {/* Shop by Category Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Shop by Category</Text>
-          </View>
-          {loading ? (
-            <ActivityIndicator size="large" color="#1d3557" style={{ marginTop: 20 }} />
-          ) : (
-            <FlatList
-              data={categories}
-              keyExtractor={(item) => item.id.toString()}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={styles.categoryCard} 
-                  onPress={() => navigation.navigate('ProductList', { 
-                    activeFilters: { categories: [item.id], subcategories: [], brands: [], pmp: false, promotion: false } 
-                  })}
-                >
-                  <Icon name="grid-outline" size={24} color="#2a9d8f" />
-                  <Text style={styles.categoryName}>{item.name}</Text>
-                </TouchableOpacity>
-              )}
-              contentContainerStyle={{ paddingHorizontal: 16 }}
-            />
-          )}
+        <View style={styles.bannerPlaceholder}>
+          <Text style={styles.bannerPlaceholderText}>Banner Placeholder</Text>
         </View>
 
         {/* Trending Products Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Trending Products</Text>
+            <Text style={styles.trendingSectionTitle}>Trending Products</Text>
             <TouchableOpacity onPress={() => navigation.navigate('ProductList')}>
               <Text style={styles.viewAllButton}>View All</Text>
             </TouchableOpacity>
@@ -113,14 +94,50 @@ export default function HomeScreen({ navigation }) {
               contentContainerStyle={{ paddingHorizontal: 16 }}
             />
           )}
+          <View style={styles.content}>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('ProductList')}>
+              <Text style={styles.primaryButtonText}>View All Products</Text>
+              <Icon name="arrow-forward" size={16} color="white" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View style={styles.content}>
-          <Button
-            title="Go to All Products"
-            onPress={() => navigation.navigate('ProductList')}
-          />
+        {/* Shop by Category Section */}
+        <View style={styles.section}>
+          <Text style={styles.mainSectionTitle}>Shop by Categories</Text>
+          {loading ? (
+            <ActivityIndicator size="large" color="#1d3557" style={{ marginTop: 20 }} />
+          ) : (
+            categories.map(category => (
+              <View key={category.id} style={styles.categorySection}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>{category.name}</Text>
+                </View>
+                <FlatList
+                  data={subcategories.filter(sc => sc.category_id === category.id)}
+                  keyExtractor={(item) => item.id.toString()}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity 
+                      style={styles.categoryCard} 
+                      onPress={() => {
+                        navigation.navigate('ProductList', { 
+                          activeFilters: { categories: [item.category_id], subcategories: [item.id], brands: [], pmp: false, promotion: false } 
+                        });
+                      }}
+                    >
+                      <Icon name={getIconForSubcategory(item.name)} size={32} color="#1d3557" />
+                      <Text style={styles.categoryName} numberOfLines={2}>{item.name}</Text>
+                    </TouchableOpacity>
+                  )}
+                  contentContainerStyle={{ paddingHorizontal: 16 }}
+                />
+              </View>
+            ))
+          )}
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -139,11 +156,8 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 10,
   },
-  sliderContainer: {
-    height: 200,
-  },
   bannerPlaceholder: {
-    flex: 1,
+    height: 180,
     backgroundColor: '#e9ecef',
     justifyContent: 'center',
     alignItems: 'center',
@@ -154,7 +168,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   section: {
-    marginTop: 20,
+    paddingTop: 30, // Use paddingTop for the first section
+  },
+  categorySection: {
+    marginBottom: 20, // Space between each category and its slider
+  },
+  mainSectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#1d3557',
+    paddingHorizontal: 16,
+    marginBottom: 15,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -163,9 +187,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 12,
   },
-  sectionTitle: {
+  trendingSectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
+    color: '#1d3557',
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'normal',
     color: '#1d3557',
   },
   viewAllButton: {
@@ -176,22 +205,22 @@ const styles = StyleSheet.create({
   categoryCard: {
     backgroundColor: 'white',
     borderRadius: 12,
-    width: 120,
-    height: 100,
+    width: 110,
+    height: 110,
     marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 10,
+    padding: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   categoryName: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#212529',
+    color: '#1d3557',
     textAlign: 'center',
     marginTop: 8,
   },
@@ -250,6 +279,21 @@ const styles = StyleSheet.create({
     elevation: 4, // Add shadow for Android
   },
   content: {
+    paddingHorizontal: 16,
+    marginTop: 20,
+  },
+  primaryButton: {
+    backgroundColor: '#1d3557',
+    borderRadius: 12,
     padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 8,
   }
 });
