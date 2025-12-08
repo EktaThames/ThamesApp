@@ -1,4 +1,5 @@
 // setupDatabase.js
+require('dotenv').config();
 const db = require('./db');
 
 const setupTables = async () => {
@@ -103,6 +104,7 @@ const setupTables = async () => {
       CREATE TABLE product_barcodes (
         id SERIAL PRIMARY KEY,
         product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+        tier INTEGER,
         barcode VARCHAR(50),
         barcode_type VARCHAR(50)
       );

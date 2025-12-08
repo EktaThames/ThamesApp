@@ -4,20 +4,20 @@ const { importCategories } = require('./utils/importCategories');
 const { importBrands } = require('./utils/importBrands');
 const db = require('./db');
 
-const runUpdate = async () => {
+async function runUpdate() {
   try {
     console.log('--- Starting Nightly Update ---');
     await importBrands();
     await importCategories();
     await importProducts();
-    // In the future, you could add other nightly tasks here.
     console.log('--- Nightly Update Finished ---');
   } catch (error) {
     console.error('--- Nightly Update FAILED ---', error);
   } finally {
-    // Always close the database pool when the script is done
+    console.log('Closing database connection pool...');
     await db.pool.end();
+    console.log('Connection pool closed.');
   }
-};
+}
 
 runUpdate();

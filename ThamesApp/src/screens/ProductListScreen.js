@@ -12,6 +12,11 @@ export default function ProductListScreen({ navigation, route }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isFilterVisible, setFilterVisible] = useState(false);
+  const [isScannerVisible, setScannerVisible] = useState(false);
+  const [scannedBarcode, setScannedBarcode] = useState('');
+  const [scanError, setScanError] = useState('');
+  const [scanLoading, setScanLoading] = useState(false);
+
 
   // State for filter options
   const [categories, setCategories] = useState([]);
@@ -175,6 +180,30 @@ export default function ProductListScreen({ navigation, route }) {
     }
   }, [searchQuery, products, activeFilters]);
 
+  const handleBarcodeSearch = async () => {
+    if (!scannedBarcode) return;
+    setScanLoading(true);
+    setScanError('');
+    try {
+      const response = await fetch(`${API_URL}/api/products/by-barcode/${scannedBarcode}`);
+      const product = await response.json();
+
+      if (response.ok) {
+        setFilteredProducts([product]); // Show only the scanned product
+        setExpandedProductId(product.id); // Expand it
+        setScannerVisible(false); // Close the modal
+        setScannedBarcode('');
+      } else {
+        setScanError(product.message || 'Product not found.');
+      }
+    } catch (error) {
+      setScanError('An error occurred. Please try again.');
+      console.error('Barcode search error:', error);
+    } finally {
+      setScanLoading(false);
+    }
+  };
+
   const handleCategoryToggle = (catId) => {
     setActiveFilters(prev => {
       const newCategories = prev.categories.includes(catId)
@@ -336,6 +365,42 @@ export default function ProductListScreen({ navigation, route }) {
         </TouchableWithoutFeedback>
       </Modal>
 
+      {/* Barcode Scanner Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isScannerVisible}
+        onRequestClose={() => setScannerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.scannerModalContent}>
+            <Text style={styles.modalTitle}>Scan Barcode</Text>
+            <Text style={styles.scannerInstruction}>
+              Enter the barcode number below to find a product.
+            </Text>
+            <TextInput
+              style={styles.barcodeInput}
+              placeholder="Enter EAN..."
+              value={scannedBarcode}
+              onChangeText={setScannedBarcode}
+              keyboardType="numeric"
+              autoFocus
+            />
+            {scanError ? <Text style={styles.scanErrorText}>{scanError}</Text> : null}
+            <TouchableOpacity style={styles.primaryButton} onPress={handleBarcodeSearch} disabled={scanLoading}>
+              {scanLoading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Find Product</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setScannerVisible(false)}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.searchContainer}>
@@ -347,7 +412,7 @@ export default function ProductListScreen({ navigation, route }) {
             onChangeText={setSearchQuery}
             placeholderTextColor="#6c757d"
           />
-          <TouchableOpacity style={styles.barcodeButton} onPress={() => alert('Barcode scanner coming soon!')}>
+          <TouchableOpacity style={styles.barcodeButton} onPress={() => setScannerVisible(true)}>
             <Icon name="camera-outline" size={24} color="#495057" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.filterButton} onPress={() => setFilterVisible(true)}>
@@ -779,5 +844,46 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  scannerModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 25,
+    margin: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  scannerInstruction: {
+    fontSize: 16,
+    color: '#6c757d',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  barcodeInput: {
+    height: 50,
+    width: '100%',
+    borderColor: '#ced4da',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    fontSize: 18,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  scanErrorText: {
+    color: '#e63946',
+    marginBottom: 10,
+  },
+  cancelButton: {
+    marginTop: 15,
+  },
+  cancelButtonText: {
+    color: '#6c757d',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

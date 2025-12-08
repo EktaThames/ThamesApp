@@ -31,7 +31,7 @@ app.get('/', (req, res) => {
 });
 
 // Routes
-app.use('/api/auth', authRoutes);         // Auth endpoints: register/login
+app.use('/api/auth', authRoutes); // Auth endpoints: register/login
 app.use('/api/products', productRoutes); // Products endpoints: list/get products
 app.use('/api/categories', categoryRoutes); // Category endpoints
 app.use('/api/brands', brandRoutes); // Brand endpoints

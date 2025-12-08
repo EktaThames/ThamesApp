@@ -81,4 +81,43 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// GET product by barcode
+router.get('/by-barcode/:barcode', async (req, res) => {
+    const { barcode } = req.params;
+    if (!barcode) {
+        return res.status(400).json({ message: 'Barcode is required.' });
+    }
+
+    try {
+        // 1. Find the product_id from the product_barcodes table
+        const barcodeResult = await db.query('SELECT product_id FROM product_barcodes WHERE barcode = $1', [barcode]);
+        const barcodeEntry = barcodeResult.rows[0];
+
+        if (!barcodeEntry) {
+            return res.status(404).json({ message: 'Product not found for this barcode.' });
+        }
+
+        const productId = barcodeEntry.product_id;
+
+        // 2. Fetch the full product details using the found product_id
+        const productResult = await db.query('SELECT * FROM products WHERE id = $1', [productId]);
+        const product = productResult.rows[0];
+
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found.' });
+        }
+
+        // 3. Fetch associated barcodes and pricing (same logic as the main GET / route)
+        const allBarcodesResult = await db.query('SELECT * FROM product_barcodes WHERE product_id = $1', [productId]);
+        const allPricingResult = await db.query('SELECT * FROM product_pricing WHERE product_id = $1 ORDER BY tier ASC', [productId]);
+
+        const imageUrl = `${process.env.IMAGE_BASE_URL}/${product.item}.webp`;
+
+        res.json({ ...product, image_url: imageUrl, barcodes: allBarcodesResult.rows, pricing: allPricingResult.rows });
+    } catch (err) {
+        console.error('Error fetching product by barcode:', err.message);
+        res.status(500).json({ message: 'Server error fetching product by barcode.' });
+    }
+});
+
 module.exports = router;
