@@ -9,7 +9,7 @@ const setupTables = async () => {
   try {
     // Drop tables
     await client.query(`
-      DROP TABLE IF EXISTS product_pricing, product_barcodes, products, order_lines, orders, customers, users, subcategories, categories, brands;
+      DROP TABLE IF EXISTS product_pricing, product_barcodes, products, order_items, orders, customers, users, subcategories, categories, brands CASCADE;
     `);
     console.log("Dropped old tables.");
 
@@ -133,24 +133,26 @@ const setupTables = async () => {
     await client.query(`
       CREATE TABLE orders (
         id SERIAL PRIMARY KEY,
-        customer_id INTEGER NOT NULL REFERENCES customers(id),
-        sales_rep_id INTEGER REFERENCES users(id),
-        status order_status NOT NULL DEFAULT 'placed',
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        total_amount NUMERIC(10, 2) NOT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'Placed',
+        order_date TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
     console.log("Created 'orders' table.");
 
-    // ORDER LINES TABLE
+    // ORDER ITEMS TABLE
     await client.query(`
-      CREATE TABLE order_lines (
+      CREATE TABLE order_items (
         id SERIAL PRIMARY KEY,
         order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-        product_id INTEGER NOT NULL REFERENCES products(id),
-        quantity INTEGER NOT NULL
+        product_id INTEGER NOT NULL,
+        tier INTEGER NOT NULL,
+        quantity INTEGER NOT NULL,
+        price NUMERIC(10, 2) NOT NULL
       );
     `);
-    console.log("Created 'order_lines' table.");
+    console.log("Created 'order_items' table.");
 
     console.log("✅ Database setup complete!");
   } catch (err) {

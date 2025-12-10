@@ -516,10 +516,16 @@ export default function ProductListScreen({ navigation, route }) {
 
       {/* Cart Total Footer */}
       {totalItems > 0 && (
-        <View style={styles.footer}>
+        <TouchableOpacity 
+          style={styles.footer}
+          onPress={() => navigation.navigate('Cart', { cart, onCartUpdate: setCart })}
+        >
           <Text style={styles.footerText}>{totalItems} item(s) in cart</Text>
-          <Text style={styles.footerTotal}>Total: {formatPrice(cartTotal)}</Text>
-        </View>
+          <View style={styles.viewCartContainer}>
+            <Text style={styles.footerTotal}>View Cart: {formatPrice(cartTotal)}</Text>
+            <Icon name="chevron-forward-outline" size={22} color="white" style={{ marginLeft: 8 }}/>
+          </View>
+        </TouchableOpacity>
       )}
     </SafeAreaView>
     </>
@@ -738,6 +744,10 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  viewCartContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   emptyContainer: {
     flex: 1,

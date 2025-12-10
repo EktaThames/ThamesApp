@@ -7,6 +7,8 @@ const authRoutes = require('./routes/auth');       // Auth routes
 const productRoutes = require('./routes/products'); // Products routes
 const categoryRoutes = require('./routes/categories'); // Category routes
 const brandRoutes = require('./routes/brands'); // Brand routes
+const orderRoutes = require('./routes/orders'); // Order routes
+const checkAuth = require('./middleware/check-auth'); // Auth middleware
 const db = require('./db');                 // Database connection
 
 const app = express();
@@ -35,6 +37,7 @@ app.use('/api/auth', authRoutes); // Auth endpoints: register/login
 app.use('/api/products', productRoutes); // Products endpoints: list/get products
 app.use('/api/categories', categoryRoutes); // Category endpoints
 app.use('/api/brands', brandRoutes); // Brand endpoints
+app.use('/api/orders', checkAuth, orderRoutes); // Protected Order endpoints
 
 // Fallback route for 404
 app.use((req, res) => {
@@ -42,6 +45,6 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server is running on http://0.0.0.0:${PORT}`);
 });

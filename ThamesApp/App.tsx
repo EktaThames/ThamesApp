@@ -6,6 +6,8 @@ import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import ProductListScreen from './src/screens/ProductListScreen';
 import ProductDetails from './src/screens/ProductDetails'; 
+import CartScreen from './src/screens/CartScreen'; // <-- Import the new CartScreen
+
 
 const Stack = createNativeStackNavigator();
 
@@ -38,6 +40,8 @@ export default function App() {
           component={ProductDetails} 
           options={{ title: "Product Details" }}
         />
+                <Stack.Screen name="Cart" component={CartScreen} />
+
 
       </Stack.Navigator>
     </NavigationContainer>

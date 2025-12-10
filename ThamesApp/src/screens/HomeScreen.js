@@ -108,6 +108,10 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.primaryButtonText}>View All Products</Text>
               <Icon name="arrow-forward" size={16} color="white" />
             </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('OrderList')}>
+              <Text style={styles.secondaryButtonText}>My Orders</Text>
+              <Icon name="receipt-outline" size={16} color="#1d3557" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -311,5 +315,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginRight: 8,
-  }
+  },
+  secondaryButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1d3557',
+    marginTop: 10,
+  },
+  secondaryButtonText: {
+    color: '#1d3557',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
 });
