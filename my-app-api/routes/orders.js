@@ -5,6 +5,11 @@ const router = express.Router();
 // Handle incoming GET requests to /orders
 router.get('/', async (req, res, next) => {
     try {
+        if (!req.user || !req.user.id) {
+            console.error('GET /orders: User not authenticated');
+            return res.status(401).json({ error: 'User not authenticated' });
+        }
+
         // Fetch orders for the logged-in user
         const result = await db.query(
             'SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC',
@@ -12,7 +17,7 @@ router.get('/', async (req, res, next) => {
         );
         res.status(200).json(result.rows);
     } catch (err) {
-        console.error(err);
+        console.error('Error in GET /orders:', err);
         res.status(500).json({ error: err.message });
     }
 });
