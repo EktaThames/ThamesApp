@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
+const bcrypt = require('bcrypt');
 
 const router = express.Router();
 
@@ -13,42 +14,36 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    // Handle admin login with hardcoded credentials as requested
-    if (role === 'admin') {
-      if (username === 'admin@example.com' && password === 'admin123') {
-        const adminUser = {
-          id: 'admin01', // Static ID for example
-          username: 'admin@example.com',
-          role: 'admin',
-          name: 'Admin User'
-        };
+    // Query the database for the user
+    const result = await db.query(
+      'SELECT * FROM users WHERE username = $1 AND role = $2',
+      [username, role]
+    );
 
-        // Check if JWT_SECRET is defined to prevent 500 crashes
-        if (!process.env.JWT_SECRET) {
-          console.error('❌ FATAL ERROR: JWT_SECRET is missing in .env file');
-          return res.status(500).json({ message: 'Server configuration error: Missing JWT_SECRET' });
-        }
-
-        // Create and sign the JWT
-        const token = jwt.sign(
-          { user: adminUser },
-          process.env.JWT_SECRET,
-          { expiresIn: '1h' }
-        );
-
-        return res.json({
-          message: 'Admin login successful',
-          token,
-          user: adminUser,
-        });
-      } else {
-        return res.status(401).json({ message: 'Invalid admin credentials' });
-      }
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials or role.' });
     }
 
-    // Placeholder for other user roles (customer, sales_rep).
-    // You would query your database here to find the user and verify their password.
-    return res.status(404).json({ message: `Login for role '${role}' is not yet implemented.` });
+    const user = result.rows[0];
+
+    // Verify password (In production, use bcrypt.compare)
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials.' });
+    }
+
+    // Create and sign the JWT
+    const token = jwt.sign(
+      { user: { id: user.id, username: user.username, role: user.role, name: user.name } },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    return res.json({
+      message: 'Login successful',
+      token,
+      user: { id: user.id, username: user.username, role: user.role, name: user.name },
+    });
 
   } catch (err) {
     console.error('🔥 Login Error:', err.stack);

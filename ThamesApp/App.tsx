@@ -7,6 +7,9 @@ import HomeScreen from './src/screens/HomeScreen';
 import ProductListScreen from './src/screens/ProductListScreen';
 import ProductDetails from './src/screens/ProductDetails'; 
 import CartScreen from './src/screens/CartScreen'; // <-- Import the new CartScreen
+import OrderListScreen from './src/screens/OrderListScreen';
+import OrderDetailScreen from './src/screens/OrderDetailScreen';
+
 
 
 const Stack = createNativeStackNavigator();
@@ -41,6 +44,10 @@ export default function App() {
           options={{ title: "Product Details" }}
         />
                 <Stack.Screen name="Cart" component={CartScreen} />
+                <Stack.Screen name="OrderList" component={OrderListScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
+
+
 
 
       </Stack.Navigator>

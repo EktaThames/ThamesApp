@@ -1,5 +1,5 @@
 // Inside HomeScreen.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { View, Button, StyleSheet, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -11,6 +11,10 @@ export default function HomeScreen({ navigation }) {
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [imageErrors, setImageErrors] = useState({});
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,6 +60,13 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>ThamesCC</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Cart', { cart: {}, onCartUpdate: () => {} })}>
+          <Icon name="cart-outline" size={28} color="#1d3557" />
+        </TouchableOpacity>
+      </View>
+
       <ScrollView>
         <View style={styles.bannerPlaceholder}>
           <Text style={styles.bannerPlaceholderText}>Banner Placeholder</Text>
@@ -160,6 +171,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f4f5f7',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1d3557',
   },
   title: {
     fontSize: 28,

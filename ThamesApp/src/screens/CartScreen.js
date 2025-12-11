@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config/api';
 
 export default function CartScreen({ route, navigation }) {
-  const { cart: initialCart, onCartUpdate } = route.params;
+  const { cart: initialCart = {}, onCartUpdate = () => {} } = route.params || {};
   const [cart, setCart] = useState(initialCart);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -55,7 +55,15 @@ export default function CartScreen({ route, navigation }) {
         }),
       });
 
-      const result = await response.json();
+      // Read response as text first to handle potential HTML errors
+      const text = await response.text();
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch (e) {
+        console.error("🔥 Server Invalid Response:", text);
+        throw new Error("Server returned an invalid response. Check console for details.");
+      }
 
       if (!response.ok) {
         throw new Error(result.message || 'Failed to place order.');
