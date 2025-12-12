@@ -23,6 +23,51 @@ const FilterToggle = React.memo(({ label, isActive, onToggle }) => (
   </TouchableOpacity>
 ));
 
+// Optimized Section Components to prevent unnecessary re-renders
+const FilterSection = React.memo(({ title, items, selectedIds, onToggle }) => {
+  if (!items || items.length === 0) return null;
+  return (
+    <>
+      <Text style={styles.filterSectionTitle}>{title}</Text>
+      <View style={styles.chipContainer}>
+        {items.map(item => (
+          <FilterChip 
+            key={item.id} 
+            id={item.id}
+            label={item.name}
+            isSelected={selectedIds.includes(item.id)}
+            onToggle={onToggle}
+          />
+        ))}
+      </View>
+    </>
+  );
+});
+
+const ToggleSection = React.memo(({ pmp, promotion, onPmpToggle, onPromotionToggle }) => (
+  <View style={styles.toggleContainer}>
+    <FilterToggle 
+      label="PMP" 
+      isActive={pmp} 
+      onToggle={onPmpToggle} 
+    />
+    <FilterToggle 
+      label="Promotion" 
+      isActive={promotion} 
+      onToggle={onPromotionToggle} 
+    />
+  </View>
+));
+
+const FilterHeader = React.memo(({ onClear }) => (
+  <View style={styles.modalHeader}>
+    <Text style={styles.modalTitle}>Filters</Text>
+    <TouchableOpacity onPress={onClear}>
+      <Text style={styles.clearButtonText}>Clear All</Text>
+    </TouchableOpacity>
+  </View>
+));
+
 // Separate FilterModal component to prevent main screen re-renders
 const FilterModal = React.memo(({ 
   visible, 
@@ -46,7 +91,7 @@ const FilterModal = React.memo(({
 
   return (
     <Modal
-      animationType="fade"
+      animationType="none"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}
@@ -55,68 +100,35 @@ const FilterModal = React.memo(({
         <View style={styles.modalOverlay}>
           <TouchableWithoutFeedback>
             <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Filters</Text>
-                <TouchableOpacity onPress={onClear}>
-                  <Text style={styles.clearButtonText}>Clear All</Text>
-                </TouchableOpacity>
-              </View>
+              <FilterHeader onClear={onClear} />
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
-                <View style={styles.toggleContainer}>
-                  <FilterToggle 
-                    label="PMP" 
-                    isActive={filters.pmp} 
-                    onToggle={onPmpToggle} 
-                  />
-                  <FilterToggle 
-                    label="Promotion" 
-                    isActive={filters.promotion} 
-                    onToggle={onPromotionToggle} 
-                  />
-                </View>
+                <ToggleSection 
+                  pmp={filters.pmp} 
+                  promotion={filters.promotion} 
+                  onPmpToggle={onPmpToggle} 
+                  onPromotionToggle={onPromotionToggle} 
+                />
 
-                <Text style={styles.filterSectionTitle}>Category</Text>
-                <View style={styles.chipContainer}>
-                  {categories.map(cat => (
-                    <FilterChip 
-                      key={cat.id} 
-                      id={cat.id}
-                      label={cat.name}
-                      isSelected={filters.categories.includes(cat.id)}
-                      onToggle={onCategoryToggle}
-                    />
-                  ))}
-                </View>
+                <FilterSection 
+                  title="Category" 
+                  items={categories} 
+                  selectedIds={filters.categories} 
+                  onToggle={onCategoryToggle} 
+                />
 
-                {filters.categories.length > 0 && (
-                  <>
-                    <Text style={styles.filterSectionTitle}>Sub-category</Text>
-                    <View style={styles.chipContainer}>
-                      {filteredSubcategories.map(sub => (
-                        <FilterChip 
-                          key={sub.id} 
-                          id={sub.id}
-                          label={sub.name}
-                          isSelected={filters.subcategories.includes(sub.id)}
-                          onToggle={onSubcategoryToggle}
-                        />
-                      ))}
-                    </View>
-                  </>
-                )}
+                <FilterSection 
+                  title="Sub-category" 
+                  items={filteredSubcategories} 
+                  selectedIds={filters.subcategories} 
+                  onToggle={onSubcategoryToggle} 
+                />
 
-                <Text style={styles.filterSectionTitle}>Brand</Text>
-                <View style={styles.chipContainer}>
-                  {brands && brands.map(brand => (
-                    <FilterChip 
-                      key={brand.id} 
-                      id={brand.id}
-                      label={brand.name}
-                      isSelected={filters.brands.includes(brand.id)}
-                      onToggle={onBrandToggle}
-                    />
-                  ))}
-                </View>
+                <FilterSection 
+                  title="Brand" 
+                  items={brands} 
+                  selectedIds={filters.brands} 
+                  onToggle={onBrandToggle} 
+                />
               </ScrollView>
               <TouchableOpacity style={styles.closeButton} onPress={() => onApply(filters)}>
                 <Text style={styles.closeButtonText}>Apply Filters</Text>
