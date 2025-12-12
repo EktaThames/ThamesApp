@@ -25,22 +25,38 @@ const FilterToggle = React.memo(({ label, isActive, onToggle }) => (
 
 // Optimized Section Components to prevent unnecessary re-renders
 const FilterSection = React.memo(({ title, items, selectedIds, onToggle }) => {
+  const [expanded, setExpanded] = useState(false);
+  
+  // Use Set for O(1) lookup speed
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+
   if (!items || items.length === 0) return null;
+
+  const INITIAL_LIMIT = 16;
+  const shouldTruncate = items.length > INITIAL_LIMIT;
+  const visibleItems = shouldTruncate && !expanded ? items.slice(0, INITIAL_LIMIT) : items;
+
   return (
-    <>
+    <View>
       <Text style={styles.filterSectionTitle}>{title}</Text>
       <View style={styles.chipContainer}>
-        {items.map(item => (
+        {visibleItems.map(item => (
           <FilterChip 
             key={item.id} 
             id={item.id}
             label={item.name}
-            isSelected={selectedIds.includes(item.id)}
+            isSelected={selectedSet.has(item.id)}
             onToggle={onToggle}
           />
         ))}
       </View>
-    </>
+      {shouldTruncate && (
+        <TouchableOpacity onPress={() => setExpanded(!expanded)} style={styles.showMoreButton}>
+          <Text style={styles.showMoreText}>{expanded ? 'Show Less' : `Show All (${items.length})`}</Text>
+          <Icon name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={16} color="#2a9d8f" />
+        </TouchableOpacity>
+      )}
+    </View>
   );
 });
 
@@ -84,23 +100,10 @@ const FilterModal = React.memo(({
   onPromotionToggle,
   onClear
 }) => {
-  const [showHeavyItems, setShowHeavyItems] = useState(false);
-
   const filteredSubcategories = useMemo(() => {
     if (filters.categories.length === 0) return [];
     return subcategories.filter(sub => filters.categories.includes(sub.category_id));
   }, [subcategories, filters.categories]);
-
-  // Lazy load heavy items (Brands) to allow modal to open instantly
-  useEffect(() => {
-    if (visible) {
-      // Small delay to let the modal animation start/finish before rendering heavy lists
-      const timer = setTimeout(() => setShowHeavyItems(true), 100);
-      return () => clearTimeout(timer);
-    } else {
-      setShowHeavyItems(false);
-    }
-  }, [visible]);
 
   return (
     <Modal
@@ -136,16 +139,12 @@ const FilterModal = React.memo(({
                   onToggle={onSubcategoryToggle} 
                 />
 
-                {showHeavyItems ? (
-                  <FilterSection 
-                    title="Brand" 
-                    items={brands} 
-                    selectedIds={filters.brands} 
-                    onToggle={onBrandToggle} 
-                  />
-                ) : (
-                  brands && brands.length > 0 && <ActivityIndicator size="small" color="#1d3557" style={{ marginTop: 20 }} />
-                )}
+                <FilterSection 
+                  title="Brand" 
+                  items={brands} 
+                  selectedIds={filters.brands} 
+                  onToggle={onBrandToggle} 
+                />
               </ScrollView>
               <TouchableOpacity style={styles.closeButton} onPress={() => onApply(filters)}>
                 <Text style={styles.closeButtonText}>Apply Filters</Text>
@@ -238,23 +237,21 @@ const FilterUI = React.memo(forwardRef(({ activeFilters, categories, subcategori
       <TouchableOpacity style={styles.filterButton} onPress={openModal}>
         <Icon name="options-outline" size={24} color="#495057" />
       </TouchableOpacity>
-      {visible && (
-        <FilterModal
-          visible={true}
-          onClose={() => setVisible(false)}
-          onApply={handleApply}
-          filters={draftFilters}
-          categories={categories}
-          subcategories={subcategories}
-          brands={brands}
-          onCategoryToggle={handleCategoryToggle}
-          onSubcategoryToggle={handleSubcategoryToggle}
-          onBrandToggle={handleBrandToggle}
-          onPmpToggle={() => setDraftFilters(f => ({...f, pmp: !f.pmp}))}
-          onPromotionToggle={() => setDraftFilters(f => ({...f, promotion: !f.promotion}))}
-          onClear={handleClear}
-        />
-      )}
+      <FilterModal
+        visible={visible}
+        onClose={() => setVisible(false)}
+        onApply={handleApply}
+        filters={draftFilters}
+        categories={categories}
+        subcategories={subcategories}
+        brands={brands}
+        onCategoryToggle={handleCategoryToggle}
+        onSubcategoryToggle={handleSubcategoryToggle}
+        onBrandToggle={handleBrandToggle}
+        onPmpToggle={() => setDraftFilters(f => ({...f, pmp: !f.pmp}))}
+        onPromotionToggle={() => setDraftFilters(f => ({...f, promotion: !f.promotion}))}
+        onClear={handleClear}
+      />
     </>
   );
 }));
@@ -1025,5 +1022,17 @@ const styles = StyleSheet.create({
     color: '#6c757d',
     fontSize: 16,
     fontWeight: '500',
+  },
+  showMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    marginTop: 5,
+  },
+  showMoreText: {
+    color: '#2a9d8f',
+    fontWeight: '600',
+    marginRight: 4,
   },
 });
