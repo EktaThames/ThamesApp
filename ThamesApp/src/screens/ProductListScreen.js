@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Modal, ScrollView, TouchableWithoutFeedback, Image } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Modal, ScrollView, TouchableWithoutFeedback, Image, InteractionManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
@@ -84,10 +84,23 @@ const FilterModal = React.memo(({
   onPromotionToggle,
   onClear
 }) => {
+  const [showHeavyItems, setShowHeavyItems] = useState(false);
+
   const filteredSubcategories = useMemo(() => {
     if (filters.categories.length === 0) return [];
     return subcategories.filter(sub => filters.categories.includes(sub.category_id));
   }, [subcategories, filters.categories]);
+
+  // Lazy load heavy items (Brands) to allow modal to open instantly
+  useEffect(() => {
+    if (visible) {
+      // Small delay to let the modal animation start/finish before rendering heavy lists
+      const timer = setTimeout(() => setShowHeavyItems(true), 100);
+      return () => clearTimeout(timer);
+    } else {
+      setShowHeavyItems(false);
+    }
+  }, [visible]);
 
   return (
     <Modal
@@ -123,12 +136,16 @@ const FilterModal = React.memo(({
                   onToggle={onSubcategoryToggle} 
                 />
 
-                <FilterSection 
-                  title="Brand" 
-                  items={brands} 
-                  selectedIds={filters.brands} 
-                  onToggle={onBrandToggle} 
-                />
+                {showHeavyItems ? (
+                  <FilterSection 
+                    title="Brand" 
+                    items={brands} 
+                    selectedIds={filters.brands} 
+                    onToggle={onBrandToggle} 
+                  />
+                ) : (
+                  brands && brands.length > 0 && <ActivityIndicator size="small" color="#1d3557" style={{ marginTop: 20 }} />
+                )}
               </ScrollView>
               <TouchableOpacity style={styles.closeButton} onPress={() => onApply(filters)}>
                 <Text style={styles.closeButtonText}>Apply Filters</Text>
@@ -147,8 +164,11 @@ const FilterUI = React.memo(forwardRef(({ activeFilters, categories, subcategori
   const [draftFilters, setDraftFilters] = useState(activeFilters);
 
   const openModal = useCallback(() => {
-    setDraftFilters(activeFilters); // Reset to current active filters instantly
-    setVisible(true);
+    setDraftFilters(activeFilters);
+    // Use requestAnimationFrame to ensure the UI is ready to handle the update
+    requestAnimationFrame(() => {
+      setVisible(true);
+    });
   }, [activeFilters]);
 
   useImperativeHandle(ref, () => ({
@@ -218,21 +238,23 @@ const FilterUI = React.memo(forwardRef(({ activeFilters, categories, subcategori
       <TouchableOpacity style={styles.filterButton} onPress={openModal}>
         <Icon name="options-outline" size={24} color="#495057" />
       </TouchableOpacity>
-      <FilterModal
-        visible={visible}
-        onClose={() => setVisible(false)}
-        onApply={handleApply}
-        filters={draftFilters}
-        categories={categories}
-        subcategories={subcategories}
-        brands={brands}
-        onCategoryToggle={handleCategoryToggle}
-        onSubcategoryToggle={handleSubcategoryToggle}
-        onBrandToggle={handleBrandToggle}
-        onPmpToggle={() => setDraftFilters(f => ({...f, pmp: !f.pmp}))}
-        onPromotionToggle={() => setDraftFilters(f => ({...f, promotion: !f.promotion}))}
-        onClear={handleClear}
-      />
+      {visible && (
+        <FilterModal
+          visible={true}
+          onClose={() => setVisible(false)}
+          onApply={handleApply}
+          filters={draftFilters}
+          categories={categories}
+          subcategories={subcategories}
+          brands={brands}
+          onCategoryToggle={handleCategoryToggle}
+          onSubcategoryToggle={handleSubcategoryToggle}
+          onBrandToggle={handleBrandToggle}
+          onPmpToggle={() => setDraftFilters(f => ({...f, pmp: !f.pmp}))}
+          onPromotionToggle={() => setDraftFilters(f => ({...f, promotion: !f.promotion}))}
+          onClear={handleClear}
+        />
+      )}
     </>
   );
 }));
