@@ -1,6 +1,6 @@
 // Inside HomeScreen.js
 import React, { useEffect, useState, useLayoutEffect } from 'react';
-import { View, Button, StyleSheet, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Image } from 'react-native';
+import { View, Button, StyleSheet, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Image, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
@@ -11,6 +11,12 @@ export default function HomeScreen({ navigation }) {
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [imageErrors, setImageErrors] = useState({});
+  const [searchText, setSearchText] = useState('');
+
+  const handleSearchSubmit = () => {
+    navigation.navigate('ProductList', { initialSearch: searchText });
+    setSearchText('');
+  };
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -65,6 +71,26 @@ export default function HomeScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.navigate('Cart', { cart: {}, onCartUpdate: () => {} })}>
           <Icon name="cart-outline" size={28} color="#1d3557" />
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.searchWrapper}>
+        <View style={styles.searchContainer}>
+          <Icon name="search-outline" size={20} color="#6c757d" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name or SKU..."
+            value={searchText}
+            onChangeText={setSearchText}
+            onSubmitEditing={handleSearchSubmit}
+            placeholderTextColor="#6c757d"
+          />
+          <TouchableOpacity style={styles.barcodeButton} onPress={() => navigation.navigate('ProductList', { openScanner: true })}>
+            <Icon name="camera-outline" size={24} color="#495057" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.filterButton} onPress={() => navigation.navigate('ProductList', { openFilters: true, initialSearch: searchText })}>
+            <Icon name="options-outline" size={24} color="#495057" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView>
@@ -183,6 +209,42 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#1d3557',
+  },
+  searchWrapper: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: '#f4f5f7',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  searchIcon: {
+    marginLeft: 12,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    paddingHorizontal: 10,
+    fontSize: 16,
+    color: '#1d3557',
+  },
+  barcodeButton: {
+    paddingHorizontal: 12,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterButton: {
+    paddingHorizontal: 12,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
     fontSize: 28,

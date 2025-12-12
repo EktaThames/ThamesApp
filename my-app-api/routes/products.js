@@ -7,16 +7,92 @@ const router = express.Router();
 // GET all products with barcodes and pricing
 router.get('/', async (req, res) => {
   try {
-    // Fetch products
-    const productsResult = await db.query('SELECT * FROM products ORDER BY item ASC');
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const { search, categories, subcategories, brands, pmp, promotion } = req.query;
+
+    let queryText = 'SELECT p.* FROM products p';
+    const queryParams = [];
+    let whereClauses = [];
+    let paramIndex = 1;
+
+    // Join for promotion filtering if needed
+    if (promotion === 'true') {
+      queryText += ' JOIN product_pricing pp ON p.id = pp.product_id';
+      whereClauses.push('pp.promo_price IS NOT NULL');
+    }
+
+    // Search Filter
+    if (search) {
+      whereClauses.push(`(p.description ILIKE $${paramIndex} OR p.item ILIKE $${paramIndex})`);
+      queryParams.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    // Category Filter (expects comma-separated IDs: "1,2,3")
+    if (categories) {
+      const catIds = categories.split(',').map(Number);
+      whereClauses.push(`p.hierarchy1 = ANY($${paramIndex}::int[])`);
+      queryParams.push(catIds);
+      paramIndex++;
+    }
+
+    // Subcategory Filter
+    if (subcategories) {
+      const subIds = subcategories.split(',').map(Number);
+      whereClauses.push(`p.hierarchy2 = ANY($${paramIndex}::int[])`);
+      queryParams.push(subIds);
+      paramIndex++;
+    }
+
+    // Brand Filter
+    if (brands) {
+      const brandIds = brands.split(',').map(Number);
+      whereClauses.push(`p.brand_id = ANY($${paramIndex}::int[])`);
+      queryParams.push(brandIds);
+      paramIndex++;
+    }
+
+    // PMP Filter
+    if (pmp === 'true') {
+      whereClauses.push(`p.pmp_plain = 'PMP'`);
+    }
+
+    if (whereClauses.length > 0) {
+      queryText += ' WHERE ' + whereClauses.join(' AND ');
+    }
+
+    // Handle duplicates from Joins
+    if (promotion === 'true') {
+      queryText += ' GROUP BY p.id';
+    }
+
+    // Pagination
+    queryText += ` ORDER BY p.item ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    queryParams.push(limit, offset);
+
+    const productsResult = await db.query(queryText, queryParams);
     const products = productsResult.rows;
 
-    // Fetch all barcodes
-    const barcodeResult = await db.query('SELECT * FROM product_barcodes');
+    if (products.length === 0) {
+      return res.json([]);
+    }
+
+    // Fetch details ONLY for the products on this page
+    const productIds = products.map(p => p.id);
+    
+    const barcodeResult = await db.query(
+      'SELECT * FROM product_barcodes WHERE product_id = ANY($1::int[])',
+      [productIds]
+    );
     const barcodes = barcodeResult.rows;
 
-    // Fetch all pricing
-    const pricingResult = await db.query('SELECT * FROM product_pricing');
+    const pricingResult = await db.query(
+      'SELECT * FROM product_pricing WHERE product_id = ANY($1::int[])',
+      [productIds]
+    );
     const pricing = pricingResult.rows;
 
     // Attach barcodes and pricing to products

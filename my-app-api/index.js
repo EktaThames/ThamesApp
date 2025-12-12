@@ -2,6 +2,7 @@
 require('dotenv').config(); // This MUST be the first line
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 
 const authRoutes = require('./routes/auth');       // Auth routes
 const productRoutes = require('./routes/products'); // Products routes
@@ -16,6 +17,7 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());           // Enable CORS for all routes
+app.use(compression());    // Compress all responses
 app.use(express.json());   // Parse JSON request bodies
 
 // Test database connection on server start

@@ -154,6 +154,22 @@ const setupTables = async () => {
     `);
     console.log("Created 'order_items' table.");
 
+    // INDEXES
+    await client.query(`
+      CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+      CREATE INDEX IF NOT EXISTS idx_products_brand ON products(brand_id);
+      CREATE INDEX IF NOT EXISTS idx_products_cat ON products(hierarchy1);
+      CREATE INDEX IF NOT EXISTS idx_products_subcat ON products(hierarchy2);
+      
+      CREATE INDEX IF NOT EXISTS idx_pricing_product ON product_pricing(product_id);
+      CREATE INDEX IF NOT EXISTS idx_barcodes_product ON product_barcodes(product_id);
+
+      CREATE INDEX IF NOT EXISTS idx_products_desc_trgm ON products USING gin (description gin_trgm_ops);
+      CREATE INDEX IF NOT EXISTS idx_products_item_trgm ON products USING gin (item gin_trgm_ops);
+    `);
+    console.log("Created Indexes.");
+
     console.log("✅ Database setup complete!");
   } catch (err) {
     console.error("❌ Error during setup:", err);

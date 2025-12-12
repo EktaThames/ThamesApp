@@ -1,22 +1,246 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Modal, ScrollView, TouchableWithoutFeedback, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
 
+// Optimized Chip Component (Only re-renders if selection changes)
+const FilterChip = React.memo(({ id, label, isSelected, onToggle }) => (
+  <TouchableOpacity 
+    style={[styles.chip, isSelected && styles.chipActive]}
+    onPress={() => onToggle(id)}
+  >
+    <Text style={[styles.chipText, isSelected && styles.chipActiveText]}>{label}</Text>
+  </TouchableOpacity>
+));
+
+const FilterToggle = React.memo(({ label, isActive, onToggle }) => (
+  <TouchableOpacity 
+    style={[styles.toggleButton, isActive && styles.toggleActive]}
+    onPress={onToggle}
+  >
+    <Text style={[styles.toggleText, isActive && styles.toggleActiveText]}>{label}</Text>
+  </TouchableOpacity>
+));
+
+// Separate FilterModal component to prevent main screen re-renders
+const FilterModal = React.memo(({ 
+  visible, 
+  onClose, 
+  onApply, 
+  filters, 
+  categories, 
+  subcategories, 
+  brands,
+  onCategoryToggle,
+  onSubcategoryToggle,
+  onBrandToggle,
+  onPmpToggle,
+  onPromotionToggle,
+  onClear
+}) => {
+  const filteredSubcategories = useMemo(() => {
+    if (filters.categories.length === 0) return [];
+    return subcategories.filter(sub => filters.categories.includes(sub.category_id));
+  }, [subcategories, filters.categories]);
+
+  return (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Filters</Text>
+                <TouchableOpacity onPress={onClear}>
+                  <Text style={styles.clearButtonText}>Clear All</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+                <View style={styles.toggleContainer}>
+                  <FilterToggle 
+                    label="PMP" 
+                    isActive={filters.pmp} 
+                    onToggle={onPmpToggle} 
+                  />
+                  <FilterToggle 
+                    label="Promotion" 
+                    isActive={filters.promotion} 
+                    onToggle={onPromotionToggle} 
+                  />
+                </View>
+
+                <Text style={styles.filterSectionTitle}>Category</Text>
+                <View style={styles.chipContainer}>
+                  {categories.map(cat => (
+                    <FilterChip 
+                      key={cat.id} 
+                      id={cat.id}
+                      label={cat.name}
+                      isSelected={filters.categories.includes(cat.id)}
+                      onToggle={onCategoryToggle}
+                    />
+                  ))}
+                </View>
+
+                {filters.categories.length > 0 && (
+                  <>
+                    <Text style={styles.filterSectionTitle}>Sub-category</Text>
+                    <View style={styles.chipContainer}>
+                      {filteredSubcategories.map(sub => (
+                        <FilterChip 
+                          key={sub.id} 
+                          id={sub.id}
+                          label={sub.name}
+                          isSelected={filters.subcategories.includes(sub.id)}
+                          onToggle={onSubcategoryToggle}
+                        />
+                      ))}
+                    </View>
+                  </>
+                )}
+
+                <Text style={styles.filterSectionTitle}>Brand</Text>
+                <View style={styles.chipContainer}>
+                  {brands && brands.map(brand => (
+                    <FilterChip 
+                      key={brand.id} 
+                      id={brand.id}
+                      label={brand.name}
+                      isSelected={filters.brands.includes(brand.id)}
+                      onToggle={onBrandToggle}
+                    />
+                  ))}
+                </View>
+              </ScrollView>
+              <TouchableOpacity style={styles.closeButton} onPress={() => onApply(filters)}>
+                <Text style={styles.closeButtonText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+});
+
+// FilterUI Component: Manages visibility internally to prevent parent re-renders
+const FilterUI = React.memo(forwardRef(({ activeFilters, categories, subcategories, brands, onApply }, ref) => {
+  const [visible, setVisible] = useState(false);
+  const [draftFilters, setDraftFilters] = useState(activeFilters);
+
+  const openModal = useCallback(() => {
+    setDraftFilters(activeFilters); // Reset to current active filters instantly
+    setVisible(true);
+  }, [activeFilters]);
+
+  useImperativeHandle(ref, () => ({
+    open: openModal,
+    close: () => setVisible(false)
+  }));
+
+  // Optimization: Map subcategory ID to Category ID for O(1) lookup
+  const subcategoryCategoryMap = useMemo(() => {
+    const map = {};
+    subcategories.forEach(sub => {
+      map[sub.id] = sub.category_id;
+    });
+    return map;
+  }, [subcategories]);
+
+  const handleCategoryToggle = useCallback((catId) => {
+    setDraftFilters(prev => {
+      const newCategories = prev.categories.includes(catId)
+        ? prev.categories.filter(id => id !== catId)
+        : [...prev.categories, catId];
+      
+      const newSubcategories = prev.subcategories.filter(subId => {
+        const catId = subcategoryCategoryMap[subId];
+        return newCategories.includes(catId);
+      });
+
+      return { ...prev, categories: newCategories, subcategories: newSubcategories };
+    });
+  }, [subcategoryCategoryMap]);
+
+  const handleSubcategoryToggle = useCallback((subId) => {
+    setDraftFilters(prev => ({
+      ...prev,
+      subcategories: prev.subcategories.includes(subId)
+        ? prev.subcategories.filter(id => id !== subId)
+        : [...prev.subcategories, subId],
+    }));
+  }, []);
+
+  const handleBrandToggle = useCallback((brandId) => {
+    setDraftFilters(prev => ({
+      ...prev,
+      brands: prev.brands.includes(brandId)
+        ? prev.brands.filter(id => id !== brandId)
+        : [...prev.brands, brandId],
+    }));
+  }, []);
+
+  const handleClear = useCallback(() => {
+    setDraftFilters({
+      categories: [],
+      subcategories: [],
+      brands: [],
+      pmp: false,
+      promotion: false,
+    });
+  }, []);
+
+  const handleApply = useCallback((filters) => {
+    setVisible(false);
+    onApply(filters);
+  }, [onApply]);
+
+  return (
+    <>
+      <TouchableOpacity style={styles.filterButton} onPress={openModal}>
+        <Icon name="options-outline" size={24} color="#495057" />
+      </TouchableOpacity>
+      <FilterModal
+        visible={visible}
+        onClose={() => setVisible(false)}
+        onApply={handleApply}
+        filters={draftFilters}
+        categories={categories}
+        subcategories={subcategories}
+        brands={brands}
+        onCategoryToggle={handleCategoryToggle}
+        onSubcategoryToggle={handleSubcategoryToggle}
+        onBrandToggle={handleBrandToggle}
+        onPmpToggle={() => setDraftFilters(f => ({...f, pmp: !f.pmp}))}
+        onPromotionToggle={() => setDraftFilters(f => ({...f, promotion: !f.promotion}))}
+        onClear={handleClear}
+      />
+    </>
+  );
+}));
+
 export default function ProductListScreen({ navigation, route }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [expandedProductId, setExpandedProductId] = useState(route.params?.expandedProductId || null);
   const [cart, setCart] = useState({}); // { productId: { product, quantity } }
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [isFilterVisible, setFilterVisible] = useState(false);
-  const [isScannerVisible, setScannerVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(route.params?.initialSearch || '');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isScannerVisible, setScannerVisible] = useState(route.params?.openScanner || false);
   const [scannedBarcode, setScannedBarcode] = useState('');
   const [scanError, setScanError] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
 
+  const filterRef = useRef(null);
 
   // State for filter options
   const [categories, setCategories] = useState([]);
@@ -40,7 +264,7 @@ export default function ProductListScreen({ navigation, route }) {
     return isNaN(numericPrice) ? 'N/A' : `£${numericPrice.toFixed(2)}`;
   };
 
-  const updateCartQuantity = (product, tier, amount) => {
+  const updateCartQuantity = useCallback((product, tier, amount) => {
     const cartKey = `${product.id}-${tier.tier}`;
     setCart(prevCart => {
       const existingItem = prevCart[cartKey];
@@ -57,7 +281,7 @@ export default function ProductListScreen({ navigation, route }) {
         };
       }
     });
-  };
+  }, []);
 
   const cartTotal = Object.values(cart).reduce((total, item) => {
     const price = parseFloat(item.tier.promo_price || item.tier.sell_price);
@@ -66,22 +290,71 @@ export default function ProductListScreen({ navigation, route }) {
 
   const totalItems = Object.values(cart).reduce((total, item) => total + item.quantity, 0);
 
-  useEffect(() => {
-    fetch(`${API_URL}/api/products`)
-      .then(res => res.json())
-      .then(data => {
-        setProducts(data);
-        setFilteredProducts(data);
-        // Extract unique sizes from products for the filter options
-        // const uniqueSizes = [...new Set(data.map(p => p.pack_description).filter(Boolean))];
-        // setSizeOptions(uniqueSizes.sort());
-        setLoading(false);
-      })
-      .catch(err => {
-        console.log(err);
-        setLoading(false);
+  const fetchProducts = async (pageNumber = 1, shouldReset = false) => {
+    if (pageNumber === 1) setLoading(true);
+    
+    try {
+      // Construct Query Params
+      const params = new URLSearchParams({
+        page: pageNumber.toString(),
+        limit: '20',
+        search: debouncedSearchQuery,
+        pmp: activeFilters.pmp.toString(),
+        promotion: activeFilters.promotion.toString(),
       });
 
+      if (activeFilters.categories.length > 0) params.append('categories', activeFilters.categories.join(','));
+      if (activeFilters.subcategories.length > 0) params.append('subcategories', activeFilters.subcategories.join(','));
+      if (activeFilters.brands.length > 0) params.append('brands', activeFilters.brands.join(','));
+
+      const response = await fetch(`${API_URL}/api/products?${params.toString()}`);
+      const data = await response.json();
+
+      if (shouldReset) {
+        setProducts(data);
+      } else {
+        setProducts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const uniqueNewData = data.filter(p => !existingIds.has(p.id));
+          return [...prev, ...uniqueNewData];
+        });
+      }
+
+      setHasMore(data.length === 20); // If we got less than limit, we are at the end
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
+
+  // Initial Fetch and Filter Changes
+  useEffect(() => {
+    setPage(1);
+    fetchProducts(1, true);
+  }, [activeFilters, debouncedSearchQuery]); // Re-fetch when filters or search change
+
+  const handleLoadMore = () => {
+    if (!hasMore || loadingMore || loading) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchProducts(nextPage, false);
+  };
+
+  useEffect(() => {
     // Fetch categories for filter
     fetch(`${API_URL}/api/categories`)
       .then(res => res.json())
@@ -126,59 +399,18 @@ export default function ProductListScreen({ navigation, route }) {
     }
   }, [route.params]);
 
-  // Effect to handle filtering when search query changes
+  // Effect to handle search/scanner params when navigating from Home
   useEffect(() => {
-    const noFiltersApplied =
-      searchQuery === '' &&
-      activeFilters.categories.length === 0 &&
-      activeFilters.subcategories.length === 0 &&
-      activeFilters.brands.length === 0 &&
-      // activeFilters.sizes.length === 0 &&
-      !activeFilters.pmp &&
-      !activeFilters.promotion;
-
-    if (noFiltersApplied) {
-      setFilteredProducts(products);
-    } else {
-      let filtered = [...products];
-
-      // Apply search query
-      if (searchQuery) {
-        const lowercasedQuery = searchQuery.toLowerCase();
-        filtered = filtered.filter(product => 
-          (product.description && product.description.toLowerCase().includes(lowercasedQuery)) ||
-          (product.item && product.item.toLowerCase().includes(lowercasedQuery))
-        );
-      }
-
-      // Apply category filter (multi-select)
-      if (activeFilters.categories.length > 0) {
-        filtered = filtered.filter(p => activeFilters.categories.includes(p.hierarchy1));
-      }
-      // Apply subcategory filter (multi-select)
-      if (activeFilters.subcategories.length > 0) {
-        filtered = filtered.filter(p => activeFilters.subcategories.includes(p.hierarchy2));
-      }
-      // Apply brand filter (multi-select)
-      if (activeFilters.brands.length > 0) {
-        filtered = filtered.filter(p => activeFilters.brands.includes(p.brand_id));
-      }
-      // // Apply size filter (multi-select)
-      // if (activeFilters.sizes.length > 0) {
-      //   filtered = filtered.filter(p => activeFilters.sizes.includes(p.pack_description));
-      // }
-      // Apply PMP filter
-      if (activeFilters.pmp) {
-        filtered = filtered.filter(p => p.pmp_plain === 'PMP');
-      }
-      // Apply Promotion filter
-      if (activeFilters.promotion) {
-        filtered = filtered.filter(p => p.pricing && p.pricing.some(tier => tier.promo_price));
-      }
-
-      setFilteredProducts(filtered);
+    if (route.params?.initialSearch !== undefined) {
+      setSearchQuery(route.params.initialSearch);
     }
-  }, [searchQuery, products, activeFilters]);
+    if (route.params?.openScanner !== undefined) {
+      setScannerVisible(route.params.openScanner);
+    }
+    if (route.params?.openFilters !== undefined) {
+      if (route.params.openFilters) filterRef.current?.open();
+    }
+  }, [route.params]);
 
   const handleBarcodeSearch = async () => {
     if (!scannedBarcode) return;
@@ -189,7 +421,7 @@ export default function ProductListScreen({ navigation, route }) {
       const product = await response.json();
 
       if (response.ok) {
-        setFilteredProducts([product]); // Show only the scanned product
+        setProducts([product]); // Show only the scanned product
         setExpandedProductId(product.id); // Expand it
         setScannerVisible(false); // Close the modal
         setScannedBarcode('');
@@ -204,167 +436,94 @@ export default function ProductListScreen({ navigation, route }) {
     }
   };
 
-  const handleCategoryToggle = (catId) => {
-    setActiveFilters(prev => {
-      const newCategories = prev.categories.includes(catId)
-        ? prev.categories.filter(id => id !== catId)
-        : [...prev.categories, catId];
-      
-      // Also remove subcategories that don't belong to the remaining selected categories
-      const newSubcategories = prev.subcategories.filter(subId => {
-        const sub = subcategories.find(s => s.id === subId);
-        return sub && newCategories.includes(sub.category_id);
-      });
+  const handleApplyFilters = useCallback((newFilters) => {
+    setActiveFilters(newFilters);
+  }, []);
 
-      return { ...prev, categories: newCategories, subcategories: newSubcategories };
-    });
-  };
 
-  const handleSubcategoryToggle = (subId) => {
-    setActiveFilters(prev => ({
-      ...prev,
-      subcategories: prev.subcategories.includes(subId)
-        ? prev.subcategories.filter(id => id !== subId)
-        : [...prev.subcategories, subId],
-    }));
-  };
+  // Memoize the renderItem function to prevent the FlatList from re-rendering
+  // when we are just interacting with the Modal (which updates state)
+  const renderProductItem = useCallback(({ item }) => {
+    const isExpanded = expandedProductId === item.id;
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => setExpandedProductId(isExpanded ? null : item.id)}
+      >
+        {/* Collapsed View */}
+        <View style={styles.collapsedContainer}>
+          <Image source={{ uri: item.image_url }} style={styles.productImage} />
+          <View style={styles.infoContainer}>
+            <Text style={styles.name} numberOfLines={2}>{item.description}</Text>
+            <Text style={styles.sku}>
+              SKU: {item.item} {item.pack_description ? `| ${item.pack_description}` : ''}
+            </Text>
+          </View>
+          <View style={styles.priceContainer}>
+            {item.pricing && item.pricing.length > 0 && (
+              <Text style={styles.price}>{formatPrice(item.pricing[0].sell_price)}</Text>
+            )}
+            <Text style={styles.stock}>Stock: {item.qty_in_stock ?? '0'}</Text>
+          </View>
+        </View>
 
-  const handleBrandToggle = (brandId) => {
-    setActiveFilters(prev => ({
-      ...prev,
-      brands: prev.brands.includes(brandId)
-        ? prev.brands.filter(id => id !== brandId)
-        : [...prev.brands, brandId],
-    }));
-  };
-
-  const handleClearFilters = () => {
-    setActiveFilters({
-      categories: [],
-      subcategories: [],
-      brands: [],
-      pmp: false,
-      promotion: false,
-    });
-  };
-
-  // const handleSizeToggle = (size) => {
-  //   setActiveFilters(prev => ({
-  //     ...prev,
-  //     sizes: prev.sizes.includes(size)
-  //       ? prev.sizes.filter(s => s !== size)
-  //       : [...prev.sizes, size],
-  //   }));
-  // };
+        {/* Expanded View */}
+        {isExpanded && (
+          <View style={styles.expandedContainer}>
+            <View style={styles.detailsGrid}>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>RRP</Text>
+                <Text style={styles.detailValue}>{formatPrice(item.rrp)}</Text> 
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>VAT</Text>
+                <Text style={styles.detailValue}>{item.vat || 'N/A'}</Text>
+              </View>
+            </View>
+            <Text style={styles.sectionTitle}>Pack Sizes & Prices</Text>
+            {item.pricing?.map(tier => (
+              <View key={tier.tier} style={styles.tierRow}>
+                <View style={styles.tierInfo}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={styles.tierPack}>{tier.pack_size || `Pack ${tier.tier}`}</Text>
+                    <Text style={styles.porText}>{!isNaN(parseFloat(item.por)) ? ` | POR: ${parseFloat(item.por).toFixed(2)}%` : ''}</Text>
+                  </View>
+                  {tier.promo_price ? (
+                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                      <Text style={styles.promoPrice}>{formatPrice(tier.promo_price)}</Text>
+                      <Text style={styles.originalPrice}>{formatPrice(tier.sell_price)}</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.normalPrice}>{formatPrice(tier.sell_price)}</Text>
+                  )}
+                </View>
+                <View style={styles.quantityContainer}>
+                  <TouchableOpacity 
+                    style={styles.quantityButton} 
+                    onPress={() => updateCartQuantity(item, tier, -1)}
+                  >
+                    <Text style={styles.quantityButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.quantityValue}>
+                    {cart[`${item.id}-${tier.tier}`]?.quantity || 0}
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.quantityButton} 
+                    onPress={() => updateCartQuantity(item, tier, 1)}>
+                    <Text style={styles.quantityButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }, [expandedProductId, cart, updateCartQuantity]);
 
   return (
     <>
       {/* FILTER MODAL */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={isFilterVisible}
-        onRequestClose={() => setFilterVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Filters</Text>
-                  <TouchableOpacity onPress={handleClearFilters}>
-                    <Text style={styles.clearButtonText}>Clear All</Text>
-                  </TouchableOpacity>
-                </View>
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
-                  {/* PMP and Promotion Toggles */}
-                  <View style={styles.toggleContainer}>
-                    <TouchableOpacity 
-                      style={[styles.toggleButton, activeFilters.pmp && styles.toggleActive]}
-                      onPress={() => setActiveFilters(f => ({...f, pmp: !f.pmp}))}
-                    >
-                      <Text style={[styles.toggleText, activeFilters.pmp && styles.toggleActiveText]}>PMP</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.toggleButton, activeFilters.promotion && styles.toggleActive]}
-                      onPress={() => setActiveFilters(f => ({...f, promotion: !f.promotion}))}
-                    >
-                      <Text style={[styles.toggleText, activeFilters.promotion && styles.toggleActiveText]}>Promotion</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Category Filter */}
-                  <Text style={styles.filterSectionTitle}>Category</Text>
-                  <View style={styles.chipContainer}>
-                    {categories.map(cat => (
-                      <TouchableOpacity 
-                        key={cat.id} 
-                        style={[styles.chip, activeFilters.categories.includes(cat.id) && styles.chipActive]}
-                        onPress={() => handleCategoryToggle(cat.id)}
-                      >
-                        <Text style={[styles.chipText, activeFilters.categories.includes(cat.id) && styles.chipActiveText]}>{cat.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {/* Subcategory Filter */}
-                  {activeFilters.categories.length > 0 && (
-                    <>
-                      <Text style={styles.filterSectionTitle}>Sub-category</Text>
-                      <View style={styles.chipContainer}>
-                        {subcategories
-                          .filter(sub => activeFilters.categories.includes(sub.category_id))
-                          .map(sub => (
-                            <TouchableOpacity 
-                              key={sub.id} 
-                              style={[styles.chip, activeFilters.subcategories.includes(sub.id) && styles.chipActive]} 
-                              onPress={() => handleSubcategoryToggle(sub.id)}
-                            >
-                              <Text style={[styles.chipText, activeFilters.subcategories.includes(sub.id) && styles.chipActiveText]}>{sub.name}</Text>
-                            </TouchableOpacity>
-                          ))}
-                      </View>
-                    </>
-                  )}
-
-                  {/* Brand Filter */}
-                  <Text style={styles.filterSectionTitle}>Brand</Text>
-                  <View style={styles.chipContainer}>
-                    {brands && brands.map(brand => (
-                      <TouchableOpacity 
-                        key={brand.id} 
-                        style={[styles.chip, activeFilters.brands.includes(brand.id) && styles.chipActive]}
-                        onPress={() => handleBrandToggle(brand.id)}
-                      >
-                        <Text style={[styles.chipText, activeFilters.brands.includes(brand.id) && styles.chipActiveText]}>{brand.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {/* {/* Size Filter */}
-                  {/* <Text style={styles.filterSectionTitle}>Size</Text> */}
-                  {/* <View style={styles.chipContainer}> */}
-                    {/* {sizeOptions.map(size => ( */}
-                      {/* <TouchableOpacity  */}
-                        {/* key={size}  */}
-                        {/* style={[styles.chip, activeFilters.sizes.includes(size) && styles.chipActive]} */}
-                        {/* onPress={() => handleSizeToggle(size)} */}
-                      {/* > */}
-                        {/* <Text style={[styles.chipText, activeFilters.sizes.includes(size) && styles.chipActiveText]}>{size}</Text> */}
-                      {/* </TouchableOpacity> */}
-                    {/* ))} */}
-                  {/* </View> */}
-
-                </ScrollView>
-                <TouchableOpacity style={styles.closeButton} onPress={() => setFilterVisible(false)}>
-                  <Text style={styles.closeButtonText}>Apply Filters</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-
       {/* Barcode Scanner Modal */}
       <Modal
         animationType="slide"
@@ -415,9 +574,15 @@ export default function ProductListScreen({ navigation, route }) {
           <TouchableOpacity style={styles.barcodeButton} onPress={() => setScannerVisible(true)}>
             <Icon name="camera-outline" size={24} color="#495057" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.filterButton} onPress={() => setFilterVisible(true)}>
-            <Icon name="options-outline" size={24} color="#495057" />
-          </TouchableOpacity>
+          
+          <FilterUI 
+            ref={filterRef}
+            activeFilters={activeFilters}
+            categories={categories}
+            subcategories={subcategories}
+            brands={brands}
+            onApply={handleApplyFilters}
+          />
         </View>
       </View>
       {loading ? (
@@ -426,91 +591,22 @@ export default function ProductListScreen({ navigation, route }) {
         </View>
       ) : (
         <FlatList
-          data={filteredProducts}
+          data={products}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => {
-            const isExpanded = expandedProductId === item.id;
-            return (
-              <TouchableOpacity
-                style={styles.card}
-                onPress={() => setExpandedProductId(isExpanded ? null : item.id)}
-              >
-                {/* Collapsed View */}
-                <View style={styles.collapsedContainer}>
-                  <Image source={{ uri: item.image_url }} style={styles.productImage} />
-                  <View style={styles.infoContainer}>
-                    <Text style={styles.name} numberOfLines={2}>{item.description}</Text>
-                    <Text style={styles.sku}>
-                      SKU: {item.item} {item.pack_description ? `| ${item.pack_description}` : ''}
-                    </Text>
-                  </View>
-                  <View style={styles.priceContainer}>
-                    {item.pricing && item.pricing.length > 0 && (
-                      <Text style={styles.price}>{formatPrice(item.pricing[0].sell_price)}</Text>
-                    )}
-                    <Text style={styles.stock}>Stock: {item.qty_in_stock ?? '0'}</Text>
-                  </View>
-                </View>
-
-                {/* Expanded View */}
-                {isExpanded && (
-                  <View style={styles.expandedContainer}>
-                    <View style={styles.detailsGrid}>
-                      <View style={styles.detailItem}>
-                        <Text style={styles.detailLabel}>RRP</Text>
-                        <Text style={styles.detailValue}>{formatPrice(item.rrp)}</Text> 
-                      </View>
-                      <View style={styles.detailItem}>
-                        <Text style={styles.detailLabel}>VAT</Text>
-                        <Text style={styles.detailValue}>{item.vat || 'N/A'}</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.sectionTitle}>Pack Sizes & Prices</Text>
-                    {item.pricing?.map(tier => (
-                      <View key={tier.tier} style={styles.tierRow}>
-                        <View style={styles.tierInfo}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Text style={styles.tierPack}>{tier.pack_size || `Pack ${tier.tier}`}</Text>
-                            <Text style={styles.porText}>{!isNaN(parseFloat(item.por)) ? ` | POR: ${parseFloat(item.por).toFixed(2)}%` : ''}</Text>
-                          </View>
-                          {tier.promo_price ? (
-                            <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                              <Text style={styles.promoPrice}>{formatPrice(tier.promo_price)}</Text>
-                              <Text style={styles.originalPrice}>{formatPrice(tier.sell_price)}</Text>
-                            </View>
-                          ) : (
-                            <Text style={styles.normalPrice}>{formatPrice(tier.sell_price)}</Text>
-                          )}
-                        </View>
-                        <View style={styles.quantityContainer}>
-                          <TouchableOpacity 
-                            style={styles.quantityButton} 
-                            onPress={() => updateCartQuantity(item, tier, -1)}
-                          >
-                            <Text style={styles.quantityButtonText}>-</Text>
-                          </TouchableOpacity>
-                          <Text style={styles.quantityValue}>
-                            {cart[`${item.id}-${tier.tier}`]?.quantity || 0}
-                          </Text>
-                          <TouchableOpacity 
-                            style={styles.quantityButton} 
-                            onPress={() => updateCartQuantity(item, tier, 1)}>
-                            <Text style={styles.quantityButtonText}>+</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          }}
+          renderItem={renderProductItem}
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No products found.</Text>
             </View>
           )}
           contentContainerStyle={{ paddingBottom: 100 }} // Padding to not hide last item behind cart total
+          ListFooterComponent={loadingMore && <ActivityIndicator size="small" color="#1d3557" style={{ marginVertical: 20 }} />}
         />
       )}
 
