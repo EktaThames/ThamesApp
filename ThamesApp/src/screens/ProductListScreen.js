@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Modal, ScrollView, TouchableWithoutFeedback, Image, InteractionManager } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Modal, ScrollView, TouchableWithoutFeedback, Image, InteractionManager, SectionList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
@@ -23,42 +23,14 @@ const FilterToggle = React.memo(({ label, isActive, onToggle }) => (
   </TouchableOpacity>
 ));
 
-// Optimized Section Components to prevent unnecessary re-renders
-const FilterSection = React.memo(({ title, items, selectedIds, onToggle }) => {
-  const [expanded, setExpanded] = useState(false);
-  
-  // Use Set for O(1) lookup speed
-  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-
-  if (!items || items.length === 0) return null;
-
-  const INITIAL_LIMIT = 16;
-  const shouldTruncate = items.length > INITIAL_LIMIT;
-  const visibleItems = shouldTruncate && !expanded ? items.slice(0, INITIAL_LIMIT) : items;
-
-  return (
-    <View>
-      <Text style={styles.filterSectionTitle}>{title}</Text>
-      <View style={styles.chipContainer}>
-        {visibleItems.map(item => (
-          <FilterChip 
-            key={item.id} 
-            id={item.id}
-            label={item.name}
-            isSelected={selectedSet.has(item.id)}
-            onToggle={onToggle}
-          />
-        ))}
-      </View>
-      {shouldTruncate && (
-        <TouchableOpacity onPress={() => setExpanded(!expanded)} style={styles.showMoreButton}>
-          <Text style={styles.showMoreText}>{expanded ? 'Show Less' : `Show All (${items.length})`}</Text>
-          <Icon name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={16} color="#2a9d8f" />
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-});
+// Helper to chunk items into rows for virtualized grid rendering
+const chunkItems = (items, size) => {
+  const chunks = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+};
 
 const ToggleSection = React.memo(({ pmp, promotion, onPmpToggle, onPromotionToggle }) => (
   <View style={styles.toggleContainer}>
@@ -100,10 +72,103 @@ const FilterModal = React.memo(({
   onPromotionToggle,
   onClear
 }) => {
+  const [expandedSections, setExpandedSections] = useState({
+    categories: false,
+    subcategories: false,
+    brands: false
+  });
+
   const filteredSubcategories = useMemo(() => {
     if (filters.categories.length === 0) return [];
     return subcategories.filter(sub => filters.categories.includes(sub.category_id));
   }, [subcategories, filters.categories]);
+
+  // Create Sets for O(1) lookup
+  const selectedCategories = useMemo(() => new Set(filters.categories), [filters.categories]);
+  const selectedSubcategories = useMemo(() => new Set(filters.subcategories), [filters.subcategories]);
+  const selectedBrands = useMemo(() => new Set(filters.brands), [filters.brands]);
+
+  const sections = useMemo(() => {
+    const result = [];
+    const INITIAL_LIMIT = 16;
+
+    const createSection = (key, title, items) => {
+      if (!items || items.length === 0) return null;
+      const isExpanded = expandedSections[key];
+      const visibleItems = isExpanded ? items : items.slice(0, INITIAL_LIMIT);
+      // Chunk items into rows of 4 for grid layout within SectionList
+      const data = chunkItems(visibleItems, 4);
+      
+      return {
+        title,
+        key,
+        data,
+        totalCount: items.length,
+        isExpanded,
+        showButton: items.length > INITIAL_LIMIT
+      };
+    };
+
+    const s1 = createSection('categories', 'Category', categories);
+    if (s1) result.push(s1);
+    
+    const s2 = createSection('subcategories', 'Sub-category', filteredSubcategories);
+    if (s2) result.push(s2);
+    
+    const s3 = createSection('brands', 'Brand', brands);
+    if (s3) result.push(s3);
+
+    return result;
+  }, [categories, filteredSubcategories, brands, expandedSections]);
+
+  const renderSectionHeader = ({ section: { title } }) => (
+    <Text style={styles.filterSectionTitle}>{title}</Text>
+  );
+
+  const renderItem = useCallback(({ item, section }) => {
+    let isSelectedFunc;
+    let onToggleFunc;
+
+    if (section.key === 'categories') {
+      isSelectedFunc = (id) => selectedCategories.has(id);
+      onToggleFunc = onCategoryToggle;
+    } else if (section.key === 'subcategories') {
+      isSelectedFunc = (id) => selectedSubcategories.has(id);
+      onToggleFunc = onSubcategoryToggle;
+    } else {
+      isSelectedFunc = (id) => selectedBrands.has(id);
+      onToggleFunc = onBrandToggle;
+    }
+
+    return (
+      <View style={styles.chipRow}>
+        {item.map(dataItem => (
+          <FilterChip
+            key={dataItem.id}
+            id={dataItem.id}
+            label={dataItem.name}
+            isSelected={isSelectedFunc(dataItem.id)}
+            onToggle={onToggleFunc}
+          />
+        ))}
+      </View>
+    );
+  }, [selectedCategories, selectedSubcategories, selectedBrands, onCategoryToggle, onSubcategoryToggle, onBrandToggle]);
+
+  const renderSectionFooter = ({ section }) => {
+    if (!section.showButton) return null;
+    return (
+      <TouchableOpacity 
+        onPress={() => setExpandedSections(prev => ({ ...prev, [section.key]: !prev[section.key] }))} 
+        style={styles.showMoreButton}
+      >
+        <Text style={styles.showMoreText}>
+          {section.isExpanded ? 'Show Less' : `Show All (${section.totalCount})`}
+        </Text>
+        <Icon name={section.isExpanded ? "chevron-up-outline" : "chevron-down-outline"} size={16} color="#2a9d8f" />
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <Modal
@@ -117,35 +182,24 @@ const FilterModal = React.memo(({
           <TouchableWithoutFeedback>
             <View style={styles.modalContent}>
               <FilterHeader onClear={onClear} />
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
-                <ToggleSection 
-                  pmp={filters.pmp} 
-                  promotion={filters.promotion} 
-                  onPmpToggle={onPmpToggle} 
-                  onPromotionToggle={onPromotionToggle} 
-                />
-
-                <FilterSection 
-                  title="Category" 
-                  items={categories} 
-                  selectedIds={filters.categories} 
-                  onToggle={onCategoryToggle} 
-                />
-
-                <FilterSection 
-                  title="Sub-category" 
-                  items={filteredSubcategories} 
-                  selectedIds={filters.subcategories} 
-                  onToggle={onSubcategoryToggle} 
-                />
-
-                <FilterSection 
-                  title="Brand" 
-                  items={brands} 
-                  selectedIds={filters.brands} 
-                  onToggle={onBrandToggle} 
-                />
-              </ScrollView>
+              <SectionList
+                sections={sections}
+                keyExtractor={(item, index) => index.toString()}
+                renderItem={renderItem}
+                renderSectionHeader={renderSectionHeader}
+                renderSectionFooter={renderSectionFooter}
+                ListHeaderComponent={
+                  <ToggleSection 
+                    pmp={filters.pmp} 
+                    promotion={filters.promotion} 
+                    onPmpToggle={onPmpToggle} 
+                    onPromotionToggle={onPromotionToggle} 
+                  />
+                }
+                contentContainerStyle={{ paddingBottom: 80 }}
+                showsVerticalScrollIndicator={false}
+                style={{ flex: 1 }}
+              />
               <TouchableOpacity style={styles.closeButton} onPress={() => onApply(filters)}>
                 <Text style={styles.closeButtonText}>Apply Filters</Text>
               </TouchableOpacity>
@@ -260,10 +314,12 @@ export default function ProductListScreen({ navigation, route }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [expandedProductId, setExpandedProductId] = useState(route.params?.expandedProductId || null);
+  const [expandedProductId, setExpandedProductId] = useState(
+    route.params?.expandedProductId ? String(route.params.expandedProductId) : null
+  );
   const [cart, setCart] = useState({}); // { productId: { product, quantity } }
   const [searchQuery, setSearchQuery] = useState(route.params?.initialSearch || '');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(route.params?.initialSearch || '');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isScannerVisible, setScannerVisible] = useState(route.params?.openScanner || false);
@@ -278,7 +334,7 @@ export default function ProductListScreen({ navigation, route }) {
   const [subcategories, setSubcategories] = useState([]);
   const [brands, setBrands] = useState([]);
   // const [sizeOptions, setSizeOptions] = useState([]);
-  const [activeFilters, setActiveFilters] = useState({
+  const [activeFilters, setActiveFilters] = useState(route.params?.activeFilters || {
     categories: [],
     subcategories: [],
     brands: [],
@@ -419,27 +475,46 @@ export default function ProductListScreen({ navigation, route }) {
 
   }, []);
 
-  // Effect to handle expanding a product when navigated to from another screen
+  // Consolidated Effect to handle all navigation params (Search, Filters, Expansion)
   useEffect(() => {
-    const { expandedProductId, activeFilters: incomingFilters } = route.params || {};
-    if (expandedProductId) {
-      setExpandedProductId(expandedProductId);
-    }
-    if (incomingFilters) {
-      setActiveFilters(incomingFilters);
-    }
-  }, [route.params]);
+    if (!route.params) return;
 
-  // Effect to handle search/scanner params when navigating from Home
-  useEffect(() => {
-    if (route.params?.initialSearch !== undefined) {
-      setSearchQuery(route.params.initialSearch);
+    const { 
+      expandedProductId, 
+      productId,
+      activeFilters: incomingFilters, 
+      initialSearch, 
+      openScanner, 
+      openFilters 
+    } = route.params;
+
+    // Handle Search & Filters together to prevent double fetch and flash of content
+    if (initialSearch !== undefined || incomingFilters) {
+      setLoading(true); // Show loading immediately to prevent showing previous results
+      setProducts([]);  // Clear previous list
+      
+      if (initialSearch !== undefined) {
+        setSearchQuery(initialSearch);
+        setDebouncedSearchQuery(initialSearch);
+      }
+      
+      if (incomingFilters) {
+        setActiveFilters(incomingFilters);
+      }
     }
-    if (route.params?.openScanner !== undefined) {
-      setScannerVisible(route.params.openScanner);
+
+    const targetId = expandedProductId ?? productId;
+    if (targetId != null && String(targetId) !== 'undefined') {
+      InteractionManager.runAfterInteractions(() => {
+        setExpandedProductId(String(targetId));
+      });
     }
-    if (route.params?.openFilters !== undefined) {
-      if (route.params.openFilters) filterRef.current?.open();
+
+    if (openScanner !== undefined) {
+      setScannerVisible(openScanner);
+    }
+    if (openFilters) {
+      filterRef.current?.open();
     }
   }, [route.params]);
 
@@ -475,7 +550,7 @@ export default function ProductListScreen({ navigation, route }) {
   // Memoize the renderItem function to prevent the FlatList from re-rendering
   // when we are just interacting with the Modal (which updates state)
   const renderProductItem = useCallback(({ item }) => {
-    const isExpanded = expandedProductId === item.id;
+    const isExpanded = expandedProductId != null && String(expandedProductId) === String(item.id);
     return (
       <TouchableOpacity
         style={styles.card}
@@ -623,6 +698,7 @@ export default function ProductListScreen({ navigation, route }) {
       ) : (
         <FlatList
           data={products}
+          extraData={expandedProductId}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           initialNumToRender={10}
@@ -951,6 +1027,10 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   chipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
   },

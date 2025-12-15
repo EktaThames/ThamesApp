@@ -36,16 +36,27 @@ export default function OrderDetailScreen({ route, navigation }) {
     fetchOrderDetails();
   }, [orderId]);
 
-  const renderItem = ({ item }) => (
-    <View style={styles.itemCard}>
-      <Image source={{ uri: item.product.image_url || 'https://via.placeholder.com/60' }} style={styles.productImage} />
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemName}>{item.product.description}</Text>
-        <Text style={styles.itemMeta}>Tier {item.tier} | Qty: {item.quantity}</Text>
-        <Text style={styles.itemPrice}>£{parseFloat(item.price).toFixed(2)}</Text>
-      </View>
-    </View>
-  );
+  const renderItem = ({ item }) => {
+    const targetId = item.product?.id || item.product_id;
+    return (
+      <TouchableOpacity
+        style={styles.itemCard}
+        onPress={() => navigation.navigate('ProductList', { 
+          productId: String(targetId),
+          expandedProductId: String(targetId), 
+          initialSearch: item.product?.item || item.product?.description || '',
+          activeFilters: { categories: [], subcategories: [], brands: [], pmp: false, promotion: false }
+        })}
+      >
+        <Image source={{ uri: item.product.image_url || 'https://via.placeholder.com/60' }} style={styles.productImage} />
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemName}>{item.product.description}</Text>
+          <Text style={styles.itemMeta}>Tier {item.tier} | Qty: {item.quantity}</Text>
+          <Text style={styles.itemPrice}>£{parseFloat(item.price).toFixed(2)}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (

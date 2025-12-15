@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -9,6 +9,10 @@ export default function CartScreen({ route, navigation }) {
   const { cart: initialCart = {}, onCartUpdate = () => {} } = route.params || {};
   const [cart, setCart] = useState(initialCart);
   const [isLoading, setIsLoading] = useState(false);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   const updateQuantity = (cartKey, amount) => {
     const updatedCart = { ...cart };
@@ -82,12 +86,22 @@ export default function CartScreen({ route, navigation }) {
 
   const renderCartItem = ({ item }) => (
     <View style={styles.card}>
-      <Image source={{ uri: item.product.image_url }} style={styles.productImage} />
-      <View style={styles.infoContainer}>
-        <Text style={styles.name}>{item.product.description}</Text>
-        <Text style={styles.tierPack}>{item.tier.pack_size || `Pack ${item.tier.tier}`}</Text>
-        <Text style={styles.price}>{formatPrice(item.tier.promo_price || item.tier.sell_price)}</Text>
-      </View>
+      <TouchableOpacity 
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+        onPress={() => navigation.navigate('ProductList', { 
+          productId: String(item.product.id),
+          expandedProductId: String(item.product.id),
+          initialSearch: item.product.item || item.product.description,
+          activeFilters: { categories: [], subcategories: [], brands: [], pmp: false, promotion: false }
+        })}
+      >
+        <Image source={{ uri: item.product.image_url }} style={styles.productImage} />
+        <View style={styles.infoContainer}>
+          <Text style={styles.name}>{item.product.description}</Text>
+          <Text style={styles.tierPack}>{item.tier.pack_size || `Pack ${item.tier.tier}`}</Text>
+          <Text style={styles.price}>{formatPrice(item.tier.promo_price || item.tier.sell_price)}</Text>
+        </View>
+      </TouchableOpacity>
       <View style={styles.quantityContainer}>
         <TouchableOpacity style={styles.quantityButton} onPress={() => updateQuantity(item.key, -1)}>
           <Text style={styles.quantityButtonText}>-</Text>
