@@ -68,7 +68,7 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>ThamesCC</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Cart', { cart: {}, onCartUpdate: () => {} })}>
+        <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
           <Icon name="cart-outline" size={28} color="#1d3557" />
         </TouchableOpacity>
       </View>

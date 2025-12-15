@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect } from 'react';
+import React, { useState, useLayoutEffect, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -14,6 +14,16 @@ export default function CartScreen({ route, navigation }) {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
+  useEffect(() => {
+    if (Object.keys(initialCart).length === 0) {
+      AsyncStorage.getItem('cart').then(storedCart => {
+        if (storedCart) {
+          setCart(JSON.parse(storedCart));
+        }
+      });
+    }
+  }, []);
+
   const updateQuantity = (cartKey, amount) => {
     const updatedCart = { ...cart };
     const item = updatedCart[cartKey];
@@ -25,6 +35,7 @@ export default function CartScreen({ route, navigation }) {
       }
       setCart(updatedCart);
       onCartUpdate(updatedCart); // Update the state in ProductListScreen
+      AsyncStorage.setItem('cart', JSON.stringify(updatedCart)).catch(e => console.error(e));
     }
   };
 
@@ -74,7 +85,9 @@ export default function CartScreen({ route, navigation }) {
       }
 
       Alert.alert('Success', 'Your order has been placed successfully!');
+      setCart({});
       onCartUpdate({}); // Clear the cart
+      await AsyncStorage.removeItem('cart');
       navigation.navigate('ProductList'); // Go back to product list
 
     } catch (error) {

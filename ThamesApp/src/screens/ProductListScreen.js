@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Modal, ScrollView, TouchableWithoutFeedback, Image, InteractionManager, SectionList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
 
@@ -351,22 +353,42 @@ export default function ProductListScreen({ navigation, route }) {
     return isNaN(numericPrice) ? 'N/A' : `£${numericPrice.toFixed(2)}`;
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      const loadCart = async () => {
+        try {
+          const storedCart = await AsyncStorage.getItem('cart');
+          if (storedCart) {
+            setCart(JSON.parse(storedCart));
+          } else {
+            setCart({});
+          }
+        } catch (e) { console.error(e); }
+      };
+      loadCart();
+    }, [])
+  );
+
   const updateCartQuantity = useCallback((product, tier, amount) => {
     const cartKey = `${product.id}-${tier.tier}`;
     setCart(prevCart => {
       const existingItem = prevCart[cartKey];
       const currentQuantity = existingItem ? existingItem.quantity : 0;
       const newQuantity = currentQuantity + amount;
+      let newCart;
 
       if (newQuantity <= 0) {
         const { [cartKey]: _, ...rest } = prevCart;
-        return rest; // Remove item from cart
+        newCart = rest; // Remove item from cart
       } else {
-        return {
+        newCart = {
           ...prevCart,
           [cartKey]: { product, tier, quantity: newQuantity }
         };
       }
+      
+      AsyncStorage.setItem('cart', JSON.stringify(newCart)).catch(e => console.error(e));
+      return newCart;
     });
   }, []);
 
