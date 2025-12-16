@@ -23,6 +23,9 @@ export default function LoginScreen({ navigation }) {
 
     // Handle non-admin users via API
     try {
+      // Allow admin to login regardless of selected role
+      const effectiveRole = email.toLowerCase() === 'admin@thames.com' ? 'admin' : userType;
+
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -32,7 +35,7 @@ export default function LoginScreen({ navigation }) {
           // Use 'username' as the key for the identifier, which is stored in the 'email' state variable.
           username: email,
           password,
-          role: userType,
+          role: effectiveRole,
         }),
       });
 
@@ -44,6 +47,7 @@ export default function LoginScreen({ navigation }) {
 
       // Store the token securely
       await AsyncStorage.setItem('userToken', data.token);
+      await AsyncStorage.setItem('userId', String(data.user.id));
 
       // On successful login, navigate to the main app, passing user data
       navigation.navigate('Home', { user: data.user });

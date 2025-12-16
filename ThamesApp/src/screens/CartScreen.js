@@ -9,19 +9,34 @@ export default function CartScreen({ route, navigation }) {
   const { cart: initialCart = {}, onCartUpdate = () => {} } = route.params || {};
   const [cart, setCart] = useState(initialCart);
   const [isLoading, setIsLoading] = useState(false);
+  const [actingAsClient, setActingAsClient] = useState(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
   useEffect(() => {
-    if (Object.keys(initialCart).length === 0) {
-      AsyncStorage.getItem('cart').then(storedCart => {
+    const loadSession = async () => {
+      const clientData = await AsyncStorage.getItem('actingAsClient');
+      let targetId = null;
+      
+      if (clientData) {
+        const client = JSON.parse(clientData);
+        setActingAsClient(client);
+        targetId = client.id;
+      } else {
+        targetId = await AsyncStorage.getItem('userId');
+      }
+
+      if (Object.keys(initialCart).length === 0) {
+        const cartKey = targetId ? `cart_${targetId}` : 'cart';
+        const storedCart = await AsyncStorage.getItem(cartKey);
         if (storedCart) {
           setCart(JSON.parse(storedCart));
         }
-      });
-    }
+      }
+    };
+    loadSession();
   }, []);
 
   const updateQuantity = (cartKey, amount) => {
@@ -35,7 +50,13 @@ export default function CartScreen({ route, navigation }) {
       }
       setCart(updatedCart);
       onCartUpdate(updatedCart); // Update the state in ProductListScreen
-      AsyncStorage.setItem('cart', JSON.stringify(updatedCart)).catch(e => console.error(e));
+      // Determine correct storage key
+      AsyncStorage.getItem('actingAsClient').then(clientData => {
+        return clientData ? JSON.parse(clientData).id : AsyncStorage.getItem('userId');
+      }).then(targetId => {
+        const cartKey = targetId ? `cart_${targetId}` : 'cart';
+        AsyncStorage.setItem(cartKey, JSON.stringify(updatedCart)).catch(e => console.error(e));
+      });
     }
   };
 
@@ -53,21 +74,27 @@ export default function CartScreen({ route, navigation }) {
     try {
       const authToken = await AsyncStorage.getItem('userToken');
 
+      const body = {
+        items: Object.values(cart).map(item => ({
+          product_id: item.product.id,
+          tier: item.tier.tier,
+          quantity: item.quantity,
+          price: parseFloat(item.tier.promo_price || item.tier.sell_price),
+        })),
+        total_amount: cartTotal,
+      };
+
+      if (actingAsClient) {
+        body.customer_id = actingAsClient.id;
+      }
+
       const response = await fetch(`${API_URL}/api/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
         },
-        body: JSON.stringify({
-          items: Object.values(cart).map(item => ({
-            product_id: item.product.id,
-            tier: item.tier.tier,
-            quantity: item.quantity,
-            price: parseFloat(item.tier.promo_price || item.tier.sell_price),
-          })),
-          total_amount: cartTotal,
-        }),
+        body: JSON.stringify(body),
       });
 
       // Read response as text first to handle potential HTML errors
@@ -87,7 +114,10 @@ export default function CartScreen({ route, navigation }) {
       Alert.alert('Success', 'Your order has been placed successfully!');
       setCart({});
       onCartUpdate({}); // Clear the cart
-      await AsyncStorage.removeItem('cart');
+      
+      const targetId = actingAsClient ? actingAsClient.id : await AsyncStorage.getItem('userId');
+      const cartKey = targetId ? `cart_${targetId}` : 'cart';
+      await AsyncStorage.removeItem(cartKey);
       navigation.navigate('ProductList'); // Go back to product list
 
     } catch (error) {
@@ -108,7 +138,7 @@ export default function CartScreen({ route, navigation }) {
           activeFilters: { categories: [], subcategories: [], brands: [], pmp: false, promotion: false }
         })}
       >
-        <Image source={{ uri: item.product.image_url }} style={styles.productImage} />
+        <Image source={{ uri: `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${item.product.item}.webp` }} style={styles.productImage} />
         <View style={styles.infoContainer}>
           <Text style={styles.name}>{item.product.description}</Text>
           <Text style={styles.tierPack}>{item.tier.pack_size || `Pack ${item.tier.tier}`}</Text>
@@ -134,6 +164,9 @@ export default function CartScreen({ route, navigation }) {
           <Icon name="arrow-back-outline" size={28} color="#1d3557" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Your Cart</Text>
+        {actingAsClient && (
+          <Text style={{ marginLeft: 'auto', color: '#2a9d8f', fontWeight: 'bold' }}>For: {actingAsClient.name}</Text>
+        )}
       </View>
 
       <FlatList

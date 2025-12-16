@@ -9,6 +9,9 @@ const productRoutes = require('./routes/products'); // Products routes
 const categoryRoutes = require('./routes/categories'); // Category routes
 const brandRoutes = require('./routes/brands'); // Brand routes
 const orderRoutes = require('./routes/orders'); // Order routes
+const userRoutes = require('./routes/users'); // User routes
+const adminRoutes = require('./routes/admin'); // Admin routes
+const salesRoutes = require('./routes/sales'); // Sales routes
 const checkAuth = require('./middleware/check-auth'); // Auth middleware
 const db = require('./db');                 // Database connection
 
@@ -40,6 +43,9 @@ app.use('/api/products', productRoutes); // Products endpoints: list/get product
 app.use('/api/categories', categoryRoutes); // Category endpoints
 app.use('/api/brands', brandRoutes); // Brand endpoints
 app.use('/api/orders', checkAuth, orderRoutes); // Protected Order endpoints
+app.use('/api/users', checkAuth, userRoutes); // Protected User endpoints
+app.use('/api/admin', checkAuth, adminRoutes); // Protected Admin endpoints
+app.use('/api/sales', checkAuth, salesRoutes); // Protected Sales endpoints
 
 // Fallback route for 404
 app.use((req, res) => {

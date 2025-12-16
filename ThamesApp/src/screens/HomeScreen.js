@@ -1,17 +1,30 @@
 // Inside HomeScreen.js
 import React, { useEffect, useState, useLayoutEffect } from 'react';
-import { View, Button, StyleSheet, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Image, TextInput } from 'react-native';
+import { View, Button, StyleSheet, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Image, TextInput, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
 
-export default function HomeScreen({ navigation }) {
+export default function HomeScreen({ navigation, route }) {
+  const { user } = route.params || {};
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [imageErrors, setImageErrors] = useState({});
   const [searchText, setSearchText] = useState('');
+
+  // Admin & Sales Rep State
+  const [adminCustomers, setAdminCustomers] = useState([]);
+  const [salesReps, setSalesReps] = useState([]);
+  const [myCustomers, setMyCustomers] = useState([]);
+  const [assignModalVisible, setAssignModalVisible] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerDetailVisible, setCustomerDetailVisible] = useState(false);
+  const [customerOrders, setCustomerOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [roleLoading, setRoleLoading] = useState(false);
 
   const handleSearchSubmit = () => {
     navigation.navigate('ProductList', { initialSearch: searchText });
@@ -53,6 +66,116 @@ export default function HomeScreen({ navigation }) {
 
     fetchData();
   }, []);
+
+  // Fetch Role-Based Data (Admin or Sales Rep)
+  useEffect(() => {
+    const fetchRoleData = async () => {
+      if (!user) return;
+      
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) return;
+
+      setRoleLoading(true);
+      try {
+        const headers = { 'Authorization': `Bearer ${token}` };
+
+        if (user.role === 'admin') {
+          // Fetch all customers and sales reps for Admin
+          const [custRes, repRes] = await Promise.all([
+            fetch(`${API_URL}/api/users?role=customer`, { headers }),
+            fetch(`${API_URL}/api/users?role=sales_rep`, { headers })
+          ]);
+          
+          const custData = await custRes.json();
+          const repData = await repRes.json();
+          
+          console.log('Admin Data Fetch:', { custData, repData });
+
+          // Helper to extract array from various API response formats
+          const extractArray = (data) => {
+            if (Array.isArray(data)) return data;
+            if (data && Array.isArray(data.data)) return data.data;
+            if (data && Array.isArray(data.users)) return data.users;
+            return [];
+          };
+
+          setAdminCustomers(extractArray(custData));
+          setSalesReps(extractArray(repData));
+
+        } else if (user.role === 'sales_rep') {
+          // Fetch assigned customers for Sales Rep
+          const res = await fetch(`${API_URL}/api/sales/my-customers`, { headers });
+          const data = await res.json();
+          
+          if (Array.isArray(data)) {
+            setMyCustomers(data);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching role data:", error);
+      } finally {
+        setRoleLoading(false);
+      }
+    };
+
+    fetchRoleData();
+  }, [user]);
+
+  const handleAssignRep = async (repId) => {
+    if (!selectedCustomer) return;
+    
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch(`${API_URL}/api/admin/assign-customer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          customer_id: selectedCustomer.id,
+          sales_rep_id: repId
+        })
+      });
+
+      if (response.ok) {
+        Alert.alert('Success', 'Sales representative assigned successfully.');
+        // Update local state to reflect change
+        setAdminCustomers(prev => prev.map(c => c.id === selectedCustomer.id ? { ...c, sales_rep_id: repId, sales_rep_name: salesReps.find(r => r.id === repId)?.name } : c));
+        setAssignModalVisible(false);
+        setSelectedCustomer(null);
+      } else {
+        Alert.alert('Error', 'Failed to assign representative.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Network error occurred.');
+    }
+  };
+
+  const handleStartOrderForCustomer = async (customer) => {
+    await AsyncStorage.setItem('actingAsClient', JSON.stringify(customer));
+    setCustomerDetailVisible(false);
+    navigation.navigate('ProductList');
+  };
+
+  const fetchCustomerOrders = async (customerId) => {
+    setOrdersLoading(true);
+    setCustomerOrders([]);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch(`${API_URL}/api/orders?user_id=${customerId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setCustomerOrders(data);
+      }
+    } catch (e) {
+      console.error("Error fetching customer orders:", e);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
 
   // Helper function to get a relevant icon for each subcategory
   const getIconForSubcategory = (name) => {
@@ -98,6 +221,72 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.bannerPlaceholderText}>Banner Placeholder</Text>
         </View>
 
+        {/* Admin Section: Manage Customers */}
+        {user?.role === 'admin' && (
+          <View style={styles.section}>
+            <Text style={styles.mainSectionTitle}>Manage Customer Allocation</Text>
+            {roleLoading ? <ActivityIndicator color="#1d3557" /> : (
+              <FlatList
+                data={adminCustomers}
+                keyExtractor={item => item.id.toString()}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+                renderItem={({ item }) => (
+                  <View style={styles.adminCard}>
+                    <Icon name="person-circle-outline" size={40} color="#1d3557" />
+                    <Text style={styles.adminCardTitle} numberOfLines={1}>{item.name || item.username || 'Customer'}</Text>
+                    <Text style={styles.adminCardSubtitle}>
+                      {item.sales_rep_name ? `Rep: ${item.sales_rep_name}` : 'Unassigned'}
+                    </Text>
+                    <TouchableOpacity 
+                      style={styles.assignButton}
+                      onPress={() => { setSelectedCustomer(item); setAssignModalVisible(true); }}
+                    >
+                      <Text style={styles.assignButtonText}>Assign Rep</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                ListEmptyComponent={<Text style={{marginLeft: 16, color: '#6c757d'}}>No customers found.</Text>}
+              />
+            )}
+          </View>
+        )}
+
+        {/* Sales Rep Section: My Customers */}
+        {user?.role === 'sales_rep' && (
+          <View style={styles.section}>
+            <Text style={styles.mainSectionTitle}>My Assigned Customers</Text>
+            {roleLoading ? <ActivityIndicator color="#1d3557" /> : (
+              <FlatList
+                data={myCustomers}
+                keyExtractor={item => item.id.toString()}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity 
+                    style={styles.adminCard}
+                    onPress={() => { 
+                      setSelectedCustomer(item); 
+                      setCustomerDetailVisible(true);
+                      fetchCustomerOrders(item.id);
+                    }}
+                  >
+                    <Icon name="briefcase" size={40} color="#2a9d8f" />
+                    <Text style={styles.adminCardTitle} numberOfLines={1}>{item.name || item.username || 'Customer'}</Text>
+                    <Text style={styles.adminCardSubtitle}>{item.email}</Text>
+                    <View style={styles.statusBadge}>
+                      <Text style={styles.statusText}>Assigned</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={<Text style={{marginLeft: 16, color: '#6c757d'}}>No customers assigned yet.</Text>}
+              />
+            )}
+          </View>
+        )}
+
         {/* Trending Products Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -121,7 +310,7 @@ export default function HomeScreen({ navigation }) {
                       <Icon name="image-outline" size={40} color="#ced4da" />
                     </View>
                   ) : (
-                    <Image source={{ uri: item.image_url }} style={styles.productImage} onError={() => handleImageError(item.item)} />
+                    <Image source={{ uri: `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${item.item}.webp` }} style={styles.productImage} onError={() => handleImageError(item.item)} />
                   )}
                   <View style={styles.productInfo}>
                     <Text style={styles.productName} numberOfLines={2}>{item.description}</Text>
@@ -189,6 +378,97 @@ export default function HomeScreen({ navigation }) {
         </View>
 
       </ScrollView>
+
+      {/* Admin Assignment Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={assignModalVisible}
+        onRequestClose={() => setAssignModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Assign Sales Rep</Text>
+            <Text style={styles.modalSubtitle}>For customer: {selectedCustomer?.name || selectedCustomer?.username}</Text>
+            
+            <FlatList
+              data={salesReps}
+              keyExtractor={item => item.id.toString()}
+              style={{ maxHeight: 300, width: '100%' }}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.repOption} onPress={() => handleAssignRep(item.id)}>
+                  <Text style={styles.repName}>{item.name || item.username}</Text>
+                  <Icon name="chevron-forward" size={20} color="#6c757d" />
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={<Text style={{padding: 20, textAlign: 'center', color: '#6c757d'}}>No sales representatives available.</Text>}
+            />
+            <TouchableOpacity style={styles.closeButton} onPress={() => setAssignModalVisible(false)}>
+              <Text style={styles.closeButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Customer Detail Modal (Sales Rep) */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={customerDetailVisible}
+        onRequestClose={() => setCustomerDetailVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+                <Text style={styles.modalTitle}>Customer Details</Text>
+                <View style={{ width: '100%', marginBottom: 20 }}>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1d3557' }}>Name:</Text>
+                  <Text style={{ fontSize: 16, color: '#495057', marginBottom: 10 }}>{selectedCustomer?.name || selectedCustomer?.username}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1d3557' }}>Email:</Text>
+                  <Text style={{ fontSize: 16, color: '#495057', marginBottom: 10 }}>{selectedCustomer?.email}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1d3557' }}>Address:</Text>
+                  <Text style={{ fontSize: 16, color: '#495057', marginBottom: 10 }}>{selectedCustomer?.address || 'N/A'}</Text>
+                </View>
+
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1d3557', alignSelf: 'flex-start', marginBottom: 10 }}>Order History</Text>
+                {ordersLoading ? (
+                  <ActivityIndicator color="#1d3557" style={{ marginBottom: 20 }} />
+                ) : (
+                  <FlatList
+                    data={customerOrders}
+                    keyExtractor={item => item.id.toString()}
+                    style={{ width: '100%', marginBottom: 20 }}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity 
+                        style={styles.orderHistoryItem}
+                        onPress={() => { 
+                          setCustomerDetailVisible(false);
+                          navigation.navigate('OrderDetail', { orderId: item.id });
+                        }}
+                      >
+                        <View>
+                          <Text style={styles.orderHistoryId}>Order #{item.id}</Text>
+                          <Text style={styles.orderHistoryDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={styles.orderHistoryAmount}>£{parseFloat(item.total_amount).toFixed(2)}</Text>
+                          <Text style={styles.orderHistoryStatus}>{item.status}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    )}
+                    ListEmptyComponent={<Text style={{ color: '#6c757d', fontStyle: 'italic' }}>No orders found for this customer.</Text>}
+                  />
+                )}
+                
+                <TouchableOpacity style={[styles.primaryButton, { width: '100%', marginBottom: 10 }]} onPress={() => handleStartOrderForCustomer(selectedCustomer)}>
+                  <Text style={styles.primaryButtonText}>Place Order for Customer</Text>
+                </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.closeButton} onPress={() => setCustomerDetailVisible(false)}>
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -418,4 +698,85 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginRight: 8,
   },
+  // Admin/Rep Styles
+  adminCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    width: 160,
+    padding: 16,
+    marginRight: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  adminCardTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1d3557',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  adminCardSubtitle: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  assignButton: {
+    backgroundColor: '#1d3557',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  assignButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statusBadge: {
+    backgroundColor: '#e0f4f1',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    marginTop: 4,
+  },
+  statusText: {
+    color: '#2a9d8f',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  // Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { width: '85%', backgroundColor: 'white', borderRadius: 20, padding: 20, alignItems: 'center', elevation: 5 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1d3557', marginBottom: 5 },
+  modalSubtitle: { fontSize: 14, color: '#6c757d', marginBottom: 20 },
+  repOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#f1f3f5' },
+  repName: { fontSize: 16, color: '#212529' },
+  closeButton: { marginTop: 20, padding: 10 },
+  closeButtonText: { color: '#e63946', fontSize: 16, fontWeight: 'bold' },
+  orderHistoryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f3f5',
+    width: '100%',
+  },
+  orderHistoryId: { fontWeight: 'bold', color: '#1d3557' },
+  orderHistoryDate: { fontSize: 12, color: '#6c757d' },
+  orderHistoryAmount: { fontWeight: 'bold', color: '#2a9d8f' },
+  orderHistoryStatus: { fontSize: 12, color: '#6c757d', textTransform: 'capitalize' },
+  orderDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f3f5',
+  },
+  orderDetailImage: { width: 50, height: 50, borderRadius: 8, marginRight: 12, backgroundColor: '#f8f9fa' },
+  orderDetailName: { fontSize: 14, fontWeight: 'bold', color: '#212529' },
+  orderDetailMeta: { fontSize: 12, color: '#6c757d', marginTop: 2 },
 });

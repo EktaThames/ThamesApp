@@ -10,11 +10,57 @@ router.get('/', async (req, res, next) => {
             return res.status(401).json({ error: 'User not authenticated' });
         }
 
-        // Fetch orders for the logged-in user
-        const result = await db.query(
-            'SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC',
-            [req.user.id]
-        );
+        const filterUserId = req.query.user_id;
+        let query;
+        let params = [req.user.id];
+
+        if (req.user.role === 'admin') {
+            if (filterUserId) {
+                query = `
+                    SELECT o.*, o.order_date as created_at, u.name as customer_name 
+                    FROM orders o
+                    JOIN users u ON o.user_id = u.id
+                    WHERE o.user_id = $1
+                    ORDER BY o.order_date DESC
+                `;
+                params = [filterUserId];
+            } else {
+                // Admin sees all orders with customer name
+                query = `
+                    SELECT o.*, o.order_date as created_at, u.name as customer_name 
+                    FROM orders o
+                    JOIN users u ON o.user_id = u.id
+                    ORDER BY o.order_date DESC
+                `;
+                params = [];
+            }
+        } else if (req.user.role === 'sales_rep') {
+            if (filterUserId) {
+                // Filter for specific customer, ensuring they belong to this rep (or it's the rep themselves)
+                query = `
+                    SELECT o.*, o.order_date as created_at, u.name as customer_name 
+                    FROM orders o
+                    JOIN users u ON o.user_id = u.id
+                    WHERE (o.user_id = $1 OR u.sales_rep_id = $1) AND o.user_id = $2
+                    ORDER BY o.order_date DESC
+                `;
+                params = [req.user.id, filterUserId];
+            } else {
+                // Sales Rep sees their own orders AND orders of their assigned customers
+                query = `
+                    SELECT o.*, o.order_date as created_at, u.name as customer_name 
+                    FROM orders o
+                    JOIN users u ON o.user_id = u.id
+                    WHERE o.user_id = $1 OR u.sales_rep_id = $1
+                    ORDER BY o.order_date DESC
+                `;
+            }
+        } else {
+            // Customers see only their own orders
+            query = 'SELECT *, order_date as created_at FROM orders WHERE user_id = $1 ORDER BY order_date DESC';
+        }
+
+        const result = await db.query(query, params);
         res.status(200).json(result.rows);
     } catch (err) {
         console.error('Error in GET /orders:', err);
@@ -25,11 +71,18 @@ router.get('/', async (req, res, next) => {
 // Handle incoming POST requests to /orders
 router.post('/', async (req, res, next) => {
     try {
+        let targetUserId = req.user.id;
+
+        // Allow Sales Rep or Admin to place order on behalf of a customer
+        if (req.body.customer_id && (req.user.role === 'sales_rep' || req.user.role === 'admin')) {
+            targetUserId = req.body.customer_id;
+        }
+
         // 1. Insert the main order
         // Using db.query directly because db.connect() is not available on the wrapper
         const orderRes = await db.query(
             'INSERT INTO orders (user_id, total_amount, status) VALUES ($1, $2, $3) RETURNING id',
-            [req.user.id, req.body.total_amount, 'order placed']
+            [targetUserId, req.body.total_amount, 'order placed']
         );
         const orderId = orderRes.rows[0].id;
 
@@ -56,19 +109,31 @@ router.post('/', async (req, res, next) => {
 router.get('/:orderId', async (req, res, next) => {
     try {
         const orderId = req.params.orderId;
+        
+        let accessCheck = 'AND o.user_id = $2';
+        let params = [orderId, req.user.id];
+
+        if (req.user.role === 'admin') {
+            accessCheck = ''; // Admin sees all
+            params = [orderId];
+        } else if (req.user.role === 'sales_rep') {
+            // Allow if order belongs to rep OR one of their customers
+            accessCheck = 'AND (o.user_id = $2 OR o.user_id IN (SELECT id FROM users WHERE sales_rep_id = $2))';
+        }
+
         // Fetch order details along with product info
         // We join orders, order_items, and products tables
         const query = `
-            SELECT o.id, o.created_at, o.total_amount, o.status,
+            SELECT o.id, o.order_date as created_at, o.total_amount, o.status,
                    i.id as item_id, i.quantity, i.price, i.tier,
-                   p.description, p.item
+                   p.id as product_id, p.description, p.item
             FROM orders o
             JOIN order_items i ON o.id = i.order_id
             JOIN products p ON i.product_id = p.id
-            WHERE o.id = $1 AND o.user_id = $2
+            WHERE o.id = $1 ${accessCheck}
         `;
         
-        const result = await db.query(query, [orderId, req.user.id]);
+        const result = await db.query(query, params);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Order not found' });
@@ -85,11 +150,12 @@ router.get('/:orderId', async (req, res, next) => {
                 quantity: row.quantity,
                 price: row.price,
                 tier: row.tier,
+                product_id: row.product_id,
                 product: {
+                    id: row.product_id,
                     description: row.description,
-                    image_url: process.env.IMAGE_BASE_URL 
-                        ? `${process.env.IMAGE_BASE_URL}/${row.item}.webp` 
-                        : null
+                    item: row.item,
+                    image_url: `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${row.item}.webp`
                 }
             }))
         };

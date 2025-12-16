@@ -33,21 +33,16 @@ const setupTables = async () => {
         id SERIAL PRIMARY KEY,
         username VARCHAR(255) UNIQUE NOT NULL,
         password TEXT NOT NULL,
-        role user_role NOT NULL
+        role user_role NOT NULL,
+        name VARCHAR(255),
+        email VARCHAR(255),
+        address TEXT,
+        sales_rep_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        CONSTRAINT check_address_role CHECK (role = 'customer' OR address IS NULL),
+        CONSTRAINT check_sales_rep_role CHECK (role = 'customer' OR sales_rep_id IS NULL)
       );
     `);
     console.log("Created 'users' table.");
-
-    // CUSTOMERS TABLE
-    await client.query(`
-      CREATE TABLE customers (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        address TEXT,
-        user_id INTEGER REFERENCES users(id)
-      );
-    `);
-    console.log("Created 'customers' table.");
 
     // CATEGORIES TABLE
     await client.query(`
@@ -157,6 +152,9 @@ const setupTables = async () => {
     // INDEXES
     await client.query(`
       CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+      CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+      CREATE INDEX IF NOT EXISTS idx_users_sales_rep ON users(sales_rep_id);
 
       CREATE INDEX IF NOT EXISTS idx_products_brand ON products(brand_id);
       CREATE INDEX IF NOT EXISTS idx_products_cat ON products(hierarchy1);

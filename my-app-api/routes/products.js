@@ -109,7 +109,7 @@ router.get('/', async (req, res) => {
           promo_start: p.promo_start,
           promo_end: p.promo_end,
         }));
-      const imageUrl = `${process.env.IMAGE_BASE_URL}/${product.item}.webp`;
+      const imageUrl = `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${product.item}.webp`;
 
       return {
         ...product,
@@ -187,7 +187,7 @@ router.get('/by-barcode/:barcode', async (req, res) => {
         const allBarcodesResult = await db.query('SELECT * FROM product_barcodes WHERE product_id = $1', [productId]);
         const allPricingResult = await db.query('SELECT * FROM product_pricing WHERE product_id = $1 ORDER BY tier ASC', [productId]);
 
-        const imageUrl = `${process.env.IMAGE_BASE_URL}/${product.item}.webp`;
+        const imageUrl = `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${product.item}.webp`;
 
         res.json({ ...product, image_url: imageUrl, barcodes: allBarcodesResult.rows, pricing: allPricingResult.rows });
     } catch (err) {

@@ -328,6 +328,7 @@ export default function ProductListScreen({ navigation, route }) {
   const [scannedBarcode, setScannedBarcode] = useState('');
   const [scanError, setScanError] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
+  const [actingAsClient, setActingAsClient] = useState(null);
 
   const filterRef = useRef(null);
 
@@ -357,7 +358,19 @@ export default function ProductListScreen({ navigation, route }) {
     useCallback(() => {
       const loadCart = async () => {
         try {
-          const storedCart = await AsyncStorage.getItem('cart');
+          const clientData = await AsyncStorage.getItem('actingAsClient');
+          let targetId = null;
+          if (clientData) {
+            const client = JSON.parse(clientData);
+            setActingAsClient(client);
+            targetId = client.id;
+          } else {
+            targetId = await AsyncStorage.getItem('userId');
+            setActingAsClient(null);
+          }
+          
+          const cartKey = targetId ? `cart_${targetId}` : 'cart';
+          const storedCart = await AsyncStorage.getItem(cartKey);
           if (storedCart) {
             setCart(JSON.parse(storedCart));
           } else {
@@ -368,6 +381,16 @@ export default function ProductListScreen({ navigation, route }) {
       loadCart();
     }, [])
   );
+
+  const exitClientMode = async () => {
+    await AsyncStorage.removeItem('actingAsClient');
+    setActingAsClient(null);
+    // Reload cart for original user
+    const userId = await AsyncStorage.getItem('userId');
+    const cartKey = userId ? `cart_${userId}` : 'cart';
+    const storedCart = await AsyncStorage.getItem(cartKey);
+    setCart(storedCart ? JSON.parse(storedCart) : {});
+  };
 
   const updateCartQuantity = useCallback((product, tier, amount) => {
     const cartKey = `${product.id}-${tier.tier}`;
@@ -387,7 +410,13 @@ export default function ProductListScreen({ navigation, route }) {
         };
       }
       
-      AsyncStorage.setItem('cart', JSON.stringify(newCart)).catch(e => console.error(e));
+      // Determine correct storage key
+      AsyncStorage.getItem('actingAsClient').then(clientData => {
+        return clientData ? JSON.parse(clientData).id : AsyncStorage.getItem('userId');
+      }).then(targetId => {
+        const cartKey = targetId ? `cart_${targetId}` : 'cart';
+        AsyncStorage.setItem(cartKey, JSON.stringify(newCart)).catch(e => console.error(e));
+      });
       return newCart;
     });
   }, []);
@@ -580,7 +609,7 @@ export default function ProductListScreen({ navigation, route }) {
       >
         {/* Collapsed View */}
         <View style={styles.collapsedContainer}>
-          <Image source={{ uri: item.image_url }} style={styles.productImage} />
+          <Image source={{ uri: `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${item.item}.webp` }} style={styles.productImage} />
           <View style={styles.infoContainer}>
             <Text style={styles.name} numberOfLines={2}>{item.description}</Text>
             <Text style={styles.sku}>
@@ -690,6 +719,14 @@ export default function ProductListScreen({ navigation, route }) {
 
       <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        {actingAsClient && (
+          <View style={{ backgroundColor: '#e0f4f1', padding: 8, marginBottom: 8, borderRadius: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ color: '#2a9d8f', fontWeight: 'bold' }}>Ordering for: {actingAsClient.name}</Text>
+            <TouchableOpacity onPress={exitClientMode}>
+              <Text style={{ color: '#e63946', fontWeight: 'bold' }}>Exit</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles.searchContainer}>
           <Icon name="search-outline" size={20} color="#6c757d" style={styles.searchIcon} />
           <TextInput

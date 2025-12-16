@@ -9,27 +9,48 @@ async function seedUsers() {
     console.log('Seeding users...');
 
     // Hash passwords
-    const customerPassword = await bcrypt.hash('test123', 10);
-    const salesRepPassword = await bcrypt.hash('test123', 10);
+    const commonPassword = await bcrypt.hash('test123', 10);
     const adminPassword = await bcrypt.hash('admin123', 10);
 
-    // Insert a test trade customer
+    // 1. Insert Admin (No address, No sales_rep_id)
     await client.query(
-      `INSERT INTO users (username, password, role) VALUES ($1, $2, 'customer') ON CONFLICT (username) DO NOTHING;`,
-      ['customer@example.com', customerPassword]
+      `INSERT INTO users (username, password, role, name, email) 
+       VALUES ('admin@thames.com', $1, 'admin', 'System Admin', 'admin@thames.com') 
+       ON CONFLICT (username) DO NOTHING;`,
+      [adminPassword]
     );
 
-    // Insert a test sales representative
+    // 2. Insert Sales Reps (No address, No sales_rep_id)
     await client.query(
-      `INSERT INTO users (username, password, role) VALUES ($1, $2, 'sales_rep') ON CONFLICT (username) DO NOTHING;`,
-      ['sales@example.com', salesRepPassword]
+      `INSERT INTO users (username, password, role, name, email) 
+       VALUES ('sales1@thames.com', $1, 'sales_rep', 'Sales Rep 1', 'sales1@thames.com') 
+       ON CONFLICT (username) DO NOTHING;`,
+      [commonPassword]
     );
 
-    // Insert a test admin
     await client.query(
-      `INSERT INTO users (username, password, role) VALUES ($1, $2, 'admin') ON CONFLICT (username) DO NOTHING;`,
-      ['admin@example.com', adminPassword]
+      `INSERT INTO users (username, password, role, name, email) 
+       VALUES ('sales2@thames.com', $1, 'sales_rep', 'Sales Rep 2', 'sales2@thames.com') 
+       ON CONFLICT (username) DO NOTHING;`,
+      [commonPassword]
     );
+
+    // Get Sales1 ID for assignment
+    const salesRes = await client.query("SELECT id FROM users WHERE username = 'sales1@thames.com'");
+    const salesId = salesRes.rows[0]?.id;
+
+    // 3. Insert Customers (Address allowed)
+    // Unassigned
+    await client.query(`INSERT INTO users (username, password, role, name, email, address, sales_rep_id) VALUES ('customer1@thames.com', $1, 'customer', 'Customer One', 'customer1@thames.com', '123 High St, London', NULL) ON CONFLICT (username) DO NOTHING;`, [commonPassword]);
+    await client.query(`INSERT INTO users (username, password, role, name, email, address, sales_rep_id) VALUES ('customer2@thames.com', $1, 'customer', 'Customer Two', 'customer2@thames.com', '456 Market Rd, Manchester', NULL) ON CONFLICT (username) DO NOTHING;`, [commonPassword]);
+
+    // Assigned to Sales1
+    if (salesId) {
+      await client.query(`
+        INSERT INTO users (username, password, role, name, email, address, sales_rep_id) 
+        VALUES ('customer3@thames.com', $1, 'customer', 'Customer Three', 'customer3@thames.com', '789 Village Ln, Leeds', $2) 
+        ON CONFLICT (username) DO NOTHING;`, [commonPassword, salesId]);
+    }
 
     console.log('✅ Users seeded successfully.');
   } catch (err) {

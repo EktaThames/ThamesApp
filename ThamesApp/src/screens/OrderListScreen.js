@@ -41,7 +41,10 @@ export default function OrderListScreen({ navigation }) {
       onPress={() => navigation.navigate('OrderDetail', { orderId: item.id })}
     >
       <View style={styles.row}>
-        <Text style={styles.orderId}>Order #{item.id}</Text>
+        <Text style={styles.orderId}>
+          Order #{item.id}
+          {item.customer_name ? <Text style={{fontWeight: 'normal', fontSize: 14}}> ({item.customer_name})</Text> : null}
+        </Text>
         <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
       </View>
       <View style={styles.row}>
