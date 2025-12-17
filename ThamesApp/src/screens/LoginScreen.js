@@ -60,6 +60,7 @@ export default function LoginScreen({ navigation }) {
       Alert.alert('Login Failed', err.message);
     } finally {
       setLoading(false);
+      
     }
   };
 
