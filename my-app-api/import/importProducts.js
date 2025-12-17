@@ -7,7 +7,16 @@ const db = require("../db");
 // Helpers
 const cleanInt = (v) => (v && v.toString().trim() !== "" ? parseInt(v) : null);
 const cleanFloat = (v) => (v && v.toString().trim() !== "" ? parseFloat(v) : null);
-const cleanDate = (v) => (v && v.toString().trim() !== "" ? v : null);
+const cleanDate = (v) => {
+  if (!v || v.toString().trim() === "") return null;
+  const str = v.toString().trim();
+  // Convert DD-MM-YYYY to YYYY-MM-DD
+  const parts = str.split('-');
+  if (parts.length === 3 && parts[2].length === 4) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+  return str;
+};
 const cleanBarcode = (v) => {
   if (!v) return null;
   let str = v.toString().trim();
