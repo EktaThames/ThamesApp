@@ -118,6 +118,12 @@ export default function CartScreen({ route, navigation }) {
       const targetId = actingAsClient ? actingAsClient.id : await AsyncStorage.getItem('userId');
       const cartKey = targetId ? `cart_${targetId}` : 'cart';
       await AsyncStorage.removeItem(cartKey);
+
+      // Clear actingAsClient so the next order defaults back to the Sales Rep (unless they select a customer again)
+      if (actingAsClient) {
+        await AsyncStorage.removeItem('actingAsClient');
+      }
+
       navigation.navigate('ProductList'); // Go back to product list
 
     } catch (error) {

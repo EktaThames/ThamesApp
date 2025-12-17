@@ -233,7 +233,14 @@ export default function HomeScreen({ navigation, route }) {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ paddingHorizontal: 16 }}
                 renderItem={({ item }) => (
-                  <View style={styles.adminCard}>
+                  <TouchableOpacity 
+                    style={styles.adminCard}
+                    onPress={() => { 
+                      setSelectedCustomer(item); 
+                      setCustomerDetailVisible(true);
+                      fetchCustomerOrders(item.id);
+                    }}
+                  >
                     <Icon name="person-circle-outline" size={40} color="#1d3557" />
                     <Text style={styles.adminCardTitle} numberOfLines={1}>{item.name || item.username || 'Customer'}</Text>
                     <Text style={styles.adminCardSubtitle}>
@@ -245,7 +252,7 @@ export default function HomeScreen({ navigation, route }) {
                     >
                       <Text style={styles.assignButtonText}>Assign Rep</Text>
                     </TouchableOpacity>
-                  </View>
+                  </TouchableOpacity>
                 )}
                 ListEmptyComponent={<Text style={{marginLeft: 16, color: '#6c757d'}}>No customers found.</Text>}
               />

@@ -5,9 +5,20 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config/api';
 
+const getStatusColor = (status) => {
+  switch (status?.toLowerCase()) {
+    case 'completed': return '#27ae60'; // Green
+    case 'picked': return '#f39c12';    // Orange
+    case 'placed': return '#3498db';    // Blue
+    case 'order placed': return '#3498db';
+    default: return '#95a5a6';          // Grey
+  }
+};
+
 export default function OrderListScreen({ navigation }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   const fetchOrders = async () => {
     try {
@@ -32,27 +43,62 @@ export default function OrderListScreen({ navigation }) {
   };
 
   useEffect(() => {
-    fetchOrders();
+    const init = async () => {
+      const storedUserId = await AsyncStorage.getItem('userId');
+      setCurrentUserId(storedUserId);
+      fetchOrders();
+    };
+    init();
   }, []);
 
-  const renderOrderItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.card}
-      onPress={() => navigation.navigate('OrderDetail', { orderId: item.id })}
-    >
-      <View style={styles.row}>
-        <Text style={styles.orderId}>
-          Order #{item.id}
-          {item.customer_name ? <Text style={{fontWeight: 'normal', fontSize: 14}}> ({item.customer_name})</Text> : null}
-        </Text>
-        <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
-      </View>
-      <View style={styles.row}>
-        <Text style={styles.status}>Status: {item.status}</Text>
-        <Text style={styles.amount}>£{parseFloat(item.total_amount).toFixed(2)}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderOrderItem = ({ item }) => {
+    // Determine display text for "Placed by"
+    const customerName = item.customer_name || item.customer_username || 'Customer';
+    const creatorName = item.creator_name || item.creator_username || customerName;
+    
+    let placedByName = customerName;
+    let onBehalfText = null;
+    const isOwnOrder = String(currentUserId) === String(item.user_id);
+
+    if (item.creator_username && item.creator_username !== item.customer_username) {
+      placedByName = creatorName;
+      if (!isOwnOrder) {
+        onBehalfText = `for ${customerName}`;
+      }
+    }
+
+    const statusColor = getStatusColor(item.status);
+
+    return (
+      <TouchableOpacity 
+        style={styles.card}
+        onPress={() => navigation.navigate('OrderDetail', { orderId: item.id })}
+      >
+        <View style={styles.cardHeader}>
+          <View>
+            <Text style={styles.orderId}>Order #{item.id}</Text>
+            <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
+            <Text style={[styles.statusText, { color: statusColor }]}>{item.status}</Text>
+          </View>
+        </View>
+        
+        <View style={styles.divider} />
+        
+        <View style={styles.cardBody}>
+          <View style={styles.userContainer}>
+            <Icon name="person-circle-outline" size={32} color="#1d3557" />
+            <View style={{marginLeft: 10, flex: 1}}>
+                <Text style={styles.placedByLabel}>Placed by <Text style={styles.placedByName}>{placedByName}</Text></Text>
+                {onBehalfText && <Text style={styles.onBehalfText}>{onBehalfText}</Text>}
+            </View>
+          </View>
+          <Text style={styles.amount}>£{parseFloat(item.total_amount).toFixed(2)}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -83,16 +129,29 @@ export default function OrderListScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#e9ecef' },
+  container: { flex: 1, backgroundColor: '#f4f5f7' },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#e9ecef', elevation: 2 },
   backButton: { marginRight: 16 },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#1d3557' },
-  card: { backgroundColor: 'white', padding: 16, borderRadius: 12, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  orderId: { fontSize: 16, fontWeight: 'bold', color: '#1d3557' },
-  date: { color: '#6c757d' },
-  status: { fontSize: 14, color: '#2a9d8f', fontWeight: '600', textTransform: 'capitalize' },
-  amount: { fontSize: 16, fontWeight: 'bold', color: '#212529' },
+  
+  card: { backgroundColor: 'white', borderRadius: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: {width: 0, height: 2}, elevation: 3, overflow: 'hidden' },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 16 },
+  orderId: { fontSize: 18, fontWeight: 'bold', color: '#1d3557' },
+  date: { color: '#6c757d', fontSize: 13, marginTop: 2 },
+  
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  statusText: { fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' },
+  
+  divider: { height: 1, backgroundColor: '#f1f3f5', marginHorizontal: 16 },
+  
+  cardBody: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
+  userContainer: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 },
+  placedByLabel: { fontSize: 12, color: '#6c757d' },
+  placedByName: { fontWeight: 'bold', color: '#1d3557', fontSize: 14 },
+  onBehalfText: { fontSize: 12, color: '#2a9d8f', fontStyle: 'italic' },
+  
+  amount: { fontSize: 18, fontWeight: 'bold', color: '#212529' },
+  
   emptyContainer: { alignItems: 'center', marginTop: 50 },
   emptyText: { fontSize: 16, color: '#6c757d' },
 });

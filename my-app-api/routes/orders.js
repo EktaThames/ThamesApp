@@ -17,9 +17,11 @@ router.get('/', async (req, res, next) => {
         if (req.user.role === 'admin') {
             if (filterUserId) {
                 query = `
-                    SELECT o.*, o.order_date as created_at, u.name as customer_name 
+                    SELECT o.*, o.order_date as created_at, u.name as customer_name, u.username as customer_username,
+                           c.name as creator_name, c.username as creator_username
                     FROM orders o
                     JOIN users u ON o.user_id = u.id
+                    LEFT JOIN users c ON o.created_by = c.id
                     WHERE o.user_id = $1
                     ORDER BY o.order_date DESC
                 `;
@@ -27,9 +29,11 @@ router.get('/', async (req, res, next) => {
             } else {
                 // Admin sees all orders with customer name
                 query = `
-                    SELECT o.*, o.order_date as created_at, u.name as customer_name 
+                    SELECT o.*, o.order_date as created_at, u.name as customer_name, u.username as customer_username,
+                           c.name as creator_name, c.username as creator_username
                     FROM orders o
                     JOIN users u ON o.user_id = u.id
+                    LEFT JOIN users c ON o.created_by = c.id
                     ORDER BY o.order_date DESC
                 `;
                 params = [];
@@ -38,9 +42,11 @@ router.get('/', async (req, res, next) => {
             if (filterUserId) {
                 // Filter for specific customer, ensuring they belong to this rep (or it's the rep themselves)
                 query = `
-                    SELECT o.*, o.order_date as created_at, u.name as customer_name 
+                    SELECT o.*, o.order_date as created_at, u.name as customer_name, u.username as customer_username,
+                           c.name as creator_name, c.username as creator_username
                     FROM orders o
                     JOIN users u ON o.user_id = u.id
+                    LEFT JOIN users c ON o.created_by = c.id
                     WHERE (o.user_id = $1 OR u.sales_rep_id = $1) AND o.user_id = $2
                     ORDER BY o.order_date DESC
                 `;
@@ -48,16 +54,24 @@ router.get('/', async (req, res, next) => {
             } else {
                 // Sales Rep sees their own orders AND orders of their assigned customers
                 query = `
-                    SELECT o.*, o.order_date as created_at, u.name as customer_name 
+                    SELECT o.*, o.order_date as created_at, u.name as customer_name, u.username as customer_username,
+                           c.name as creator_name, c.username as creator_username
                     FROM orders o
                     JOIN users u ON o.user_id = u.id
+                    LEFT JOIN users c ON o.created_by = c.id
                     WHERE o.user_id = $1 OR u.sales_rep_id = $1
                     ORDER BY o.order_date DESC
                 `;
             }
         } else {
             // Customers see only their own orders
-            query = 'SELECT *, order_date as created_at FROM orders WHERE user_id = $1 ORDER BY order_date DESC';
+            query = `
+                SELECT o.*, o.order_date as created_at, u.name as customer_name, u.username as customer_username,
+                       c.name as creator_name, c.username as creator_username
+                FROM orders o
+                JOIN users u ON o.user_id = u.id
+                LEFT JOIN users c ON o.created_by = c.id
+                WHERE o.user_id = $1 ORDER BY o.order_date DESC`;
         }
 
         const result = await db.query(query, params);
@@ -71,6 +85,10 @@ router.get('/', async (req, res, next) => {
 // Handle incoming POST requests to /orders
 router.post('/', async (req, res, next) => {
     try {
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ error: 'User not authenticated' });
+        }
+
         let targetUserId = req.user.id;
 
         // Allow Sales Rep or Admin to place order on behalf of a customer
@@ -81,8 +99,8 @@ router.post('/', async (req, res, next) => {
         // 1. Insert the main order
         // Using db.query directly because db.connect() is not available on the wrapper
         const orderRes = await db.query(
-            'INSERT INTO orders (user_id, total_amount, status) VALUES ($1, $2, $3) RETURNING id',
-            [targetUserId, req.body.total_amount, 'order placed']
+            'INSERT INTO orders (user_id, created_by, total_amount, status) VALUES ($1, $2, $3, $4) RETURNING id',
+            [targetUserId, req.user.id, req.body.total_amount, 'order placed']
         );
         const orderId = orderRes.rows[0].id;
 
@@ -125,9 +143,13 @@ router.get('/:orderId', async (req, res, next) => {
         // We join orders, order_items, and products tables
         const query = `
             SELECT o.id, o.order_date as created_at, o.total_amount, o.status,
+                   u.username as customer_username, u.name as customer_name,
+                   c.username as creator_username, c.name as creator_name,
                    i.id as item_id, i.quantity, i.price, i.tier,
                    p.id as product_id, p.description, p.item
             FROM orders o
+            JOIN users u ON o.user_id = u.id
+            LEFT JOIN users c ON o.created_by = c.id
             JOIN order_items i ON o.id = i.order_id
             JOIN products p ON i.product_id = p.id
             WHERE o.id = $1 ${accessCheck}
@@ -145,6 +167,10 @@ router.get('/:orderId', async (req, res, next) => {
             created_at: result.rows[0].created_at,
             total_amount: result.rows[0].total_amount,
             status: result.rows[0].status,
+            customer_username: result.rows[0].customer_username,
+            customer_name: result.rows[0].customer_name,
+            creator_username: result.rows[0].creator_username,
+            creator_name: result.rows[0].creator_name,
             items: result.rows.map(row => ({
                 id: row.item_id,
                 quantity: row.quantity,

@@ -129,6 +129,7 @@ const setupTables = async () => {
       CREATE TABLE orders (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id),
+        created_by INTEGER REFERENCES users(id),
         total_amount NUMERIC(10, 2) NOT NULL,
         status VARCHAR(50) NOT NULL DEFAULT 'Placed',
         order_date TIMESTAMPTZ NOT NULL DEFAULT NOW()

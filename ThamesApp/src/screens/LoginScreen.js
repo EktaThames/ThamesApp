@@ -48,6 +48,9 @@ export default function LoginScreen({ navigation }) {
       // Store the token securely
       await AsyncStorage.setItem('userToken', data.token);
       await AsyncStorage.setItem('userId', String(data.user.id));
+      
+      // Clear any previous "acting as client" session to ensure a fresh start
+      await AsyncStorage.removeItem('actingAsClient');
 
       // On successful login, navigate to the main app, passing user data
       navigation.navigate('Home', { user: data.user });
