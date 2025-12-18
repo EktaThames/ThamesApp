@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProductDetails({ route }) {
@@ -146,7 +146,12 @@ const primaryPrice = selectedPack;
             <TouchableOpacity style={styles.quantityButton} onPress={() => handleQuantityChange(-1)}>
                 <Text style={styles.quantityButtonText}>-</Text>
             </TouchableOpacity>
-            <Text style={styles.quantityValue}>{quantity}</Text>
+            <TextInput
+              style={styles.quantityInput}
+              keyboardType="numeric"
+              value={String(quantity)}
+              onChangeText={(text) => setQuantity(Math.max(1, parseInt(text) || 1))}
+            />
             <TouchableOpacity style={styles.quantityButton} onPress={() => handleQuantityChange(1)}>
                 <Text style={styles.quantityButtonText}>+</Text>
             </TouchableOpacity>

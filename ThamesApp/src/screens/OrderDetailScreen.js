@@ -137,9 +137,37 @@ export default function OrderDetailScreen({ route, navigation }) {
               </View>
             </View>
 
+            <View style={styles.divider} />
+            
+            <View style={styles.detailSection}>
+              <Text style={styles.detailLabel}>Delivery Details</Text>
+              <Text style={styles.detailText}>Date: {order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : 'N/A'}</Text>
+              <Text style={styles.detailText}>Address: {order.delivery_address || 'N/A'}</Text>
+              <Text style={styles.detailText}>Phone: {order.customer_phone || 'N/A'}</Text>
+            </View>
+
+            {order.notes && (
+              <View style={styles.detailSection}>
+                <Text style={styles.detailLabel}>Notes</Text>
+                <Text style={styles.detailText}>{order.notes}</Text>
+              </View>
+            )}
+
             <View style={styles.totalContainer}>
-              <Text style={styles.totalLabel}>Total Amount</Text>
-              <Text style={styles.totalAmount}>£{parseFloat(order.total_amount).toFixed(2)}</Text>
+              <View style={{width: '100%'}}>
+                <View style={styles.subTotalRow}>
+                  <Text style={styles.subTotalLabel}>Total:</Text>
+                  <Text style={styles.subTotalValue}>£{parseFloat(order.net_amount || 0).toFixed(2)}</Text>
+                </View>
+                <View style={styles.subTotalRow}>
+                  <Text style={styles.subTotalLabel}>Tax:</Text>
+                  <Text style={styles.subTotalValue}>£{parseFloat(order.tax_amount || 0).toFixed(2)}</Text>
+                </View>
+                <View style={styles.grossRow}>
+                  <Text style={styles.totalLabel}>Total Amount:</Text>
+                  <Text style={styles.totalAmount}>£{parseFloat(order.total_amount).toFixed(2)}</Text>
+                </View>
+              </View>
             </View>
           </View>
         }
@@ -169,8 +197,16 @@ const styles = StyleSheet.create({
   summaryValue: { fontSize: 16, fontWeight: 'bold', color: '#1d3557' },
   summarySubValue: { fontSize: 14, color: '#2a9d8f', fontStyle: 'italic' },
   
-  totalContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#f1f3f5' },
-  totalLabel: { fontSize: 16, fontWeight: '600', color: '#1d3557' },
+  detailSection: { marginBottom: 15 },
+  detailLabel: { fontSize: 12, color: '#6c757d', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: 4 },
+  detailText: { fontSize: 14, color: '#212529', marginBottom: 2 },
+
+  totalContainer: { marginTop: 5, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#f1f3f5' },
+  subTotalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  subTotalLabel: { fontSize: 14, color: '#6c757d' },
+  subTotalValue: { fontSize: 14, color: '#212529', fontWeight: '600' },
+  grossRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f8f9fa' },
+  totalLabel: { fontSize: 18, fontWeight: 'bold', color: '#1d3557' },
   totalAmount: { fontSize: 24, fontWeight: 'bold', color: '#2a9d8f' },
   
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1d3557', marginBottom: 12, marginLeft: 4 },

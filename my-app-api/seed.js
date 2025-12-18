@@ -41,14 +41,14 @@ async function seedUsers() {
 
     // 3. Insert Customers (Address allowed)
     // Unassigned
-    await client.query(`INSERT INTO users (username, password, role, name, email, address, sales_rep_id) VALUES ('customer1@thames.com', $1, 'customer', 'Customer One', 'customer1@thames.com', '123 High St, London', NULL) ON CONFLICT (username) DO NOTHING;`, [commonPassword]);
-    await client.query(`INSERT INTO users (username, password, role, name, email, address, sales_rep_id) VALUES ('customer2@thames.com', $1, 'customer', 'Customer Two', 'customer2@thames.com', '456 Market Rd, Manchester', NULL) ON CONFLICT (username) DO NOTHING;`, [commonPassword]);
+    await client.query(`INSERT INTO users (username, password, role, name, email, phone, address, sales_rep_id) VALUES ('customer1@thames.com', $1, 'customer', 'Customer One', 'customer1@thames.com', '07700900001', '123 High St, London', NULL) ON CONFLICT (username) DO NOTHING;`, [commonPassword]);
+    await client.query(`INSERT INTO users (username, password, role, name, email, phone, address, sales_rep_id) VALUES ('customer2@thames.com', $1, 'customer', 'Customer Two', 'customer2@thames.com', '07700900002', '456 Market Rd, Manchester', NULL) ON CONFLICT (username) DO NOTHING;`, [commonPassword]);
 
     // Assigned to Sales1
     if (salesId) {
       await client.query(`
-        INSERT INTO users (username, password, role, name, email, address, sales_rep_id) 
-        VALUES ('customer3@thames.com', $1, 'customer', 'Customer Three', 'customer3@thames.com', '789 Village Ln, Leeds', $2) 
+        INSERT INTO users (username, password, role, name, email, phone, address, sales_rep_id) 
+        VALUES ('customer3@thames.com', $1, 'customer', 'Customer Three', 'customer3@thames.com', '07700900003', '789 Village Ln, Leeds', $2) 
         ON CONFLICT (username) DO NOTHING;`, [commonPassword, salesId]);
     }
 

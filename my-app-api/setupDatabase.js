@@ -36,6 +36,7 @@ const setupTables = async () => {
         role user_role NOT NULL,
         name VARCHAR(255),
         email VARCHAR(255),
+        phone VARCHAR(50),
         address TEXT,
         sales_rep_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         CONSTRAINT check_address_role CHECK (role = 'customer' OR address IS NULL),
@@ -131,6 +132,12 @@ const setupTables = async () => {
         user_id INTEGER NOT NULL REFERENCES users(id),
         created_by INTEGER REFERENCES users(id),
         total_amount NUMERIC(10, 2) NOT NULL,
+        net_amount NUMERIC(10, 2),
+        tax_amount NUMERIC(10, 2),
+        delivery_date DATE,
+        delivery_address TEXT,
+        customer_phone VARCHAR(50),
+        notes TEXT,
         status VARCHAR(50) NOT NULL DEFAULT 'Placed',
         order_date TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );

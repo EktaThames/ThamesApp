@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef, forwardRef, useImperativeHandle, useLayoutEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Modal, ScrollView, TouchableWithoutFeedback, Image, InteractionManager, SectionList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -34,7 +34,7 @@ const chunkItems = (items, size) => {
   return chunks;
 };
 
-const ToggleSection = React.memo(({ pmp, promotion, onPmpToggle, onPromotionToggle }) => (
+const ToggleSection = React.memo(({ pmp, promotion, clearance, onPmpToggle, onPromotionToggle, onClearanceToggle }) => (
   <View style={styles.toggleContainer}>
     <FilterToggle 
       label="PMP" 
@@ -45,6 +45,11 @@ const ToggleSection = React.memo(({ pmp, promotion, onPmpToggle, onPromotionTogg
       label="Promotion" 
       isActive={promotion} 
       onToggle={onPromotionToggle} 
+    />
+    <FilterToggle 
+      label="Clearance" 
+      isActive={clearance} 
+      onToggle={onClearanceToggle} 
     />
   </View>
 ));
@@ -72,6 +77,7 @@ const FilterModal = React.memo(({
   onBrandToggle,
   onPmpToggle,
   onPromotionToggle,
+  onClearanceToggle,
   onClear
 }) => {
   const [expandedSections, setExpandedSections] = useState({
@@ -194,8 +200,10 @@ const FilterModal = React.memo(({
                   <ToggleSection 
                     pmp={filters.pmp} 
                     promotion={filters.promotion} 
+                    clearance={filters.clearance}
                     onPmpToggle={onPmpToggle} 
                     onPromotionToggle={onPromotionToggle} 
+                    onClearanceToggle={onClearanceToggle}
                   />
                 }
                 contentContainerStyle={{ paddingBottom: 80 }}
@@ -280,6 +288,7 @@ const FilterUI = React.memo(forwardRef(({ activeFilters, categories, subcategori
       brands: [],
       pmp: false,
       promotion: false,
+      clearance: false,
     });
   }, []);
 
@@ -306,6 +315,7 @@ const FilterUI = React.memo(forwardRef(({ activeFilters, categories, subcategori
         onBrandToggle={handleBrandToggle}
         onPmpToggle={() => setDraftFilters(f => ({...f, pmp: !f.pmp}))}
         onPromotionToggle={() => setDraftFilters(f => ({...f, promotion: !f.promotion}))}
+        onClearanceToggle={() => setDraftFilters(f => ({...f, clearance: !f.clearance}))}
         onClear={handleClear}
       />
     </>
@@ -337,14 +347,28 @@ export default function ProductListScreen({ navigation, route }) {
   const [subcategories, setSubcategories] = useState([]);
   const [brands, setBrands] = useState([]);
   // const [sizeOptions, setSizeOptions] = useState([]);
-  const [activeFilters, setActiveFilters] = useState(route.params?.activeFilters || {
+  const [activeFilters, setActiveFilters] = useState({
     categories: [],
     subcategories: [],
     brands: [],
-    // sizes: [],
     pmp: false,
     promotion: false,
+    clearance: false,
+    ...(route.params?.activeFilters || {})
   });
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Cart')}
+          style={{ marginRight: 16 }}
+        >
+          <Icon name="cart-outline" size={28} color="#1d3557" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   // Helper to format price
   const formatPrice = (price) => {
@@ -421,6 +445,32 @@ export default function ProductListScreen({ navigation, route }) {
     });
   }, []);
 
+  const setCartQuantity = useCallback((product, tier, quantity) => {
+    const cartKey = `${product.id}-${tier.tier}`;
+    setCart(prevCart => {
+      let newCart;
+      
+      if (quantity <= 0) {
+        const { [cartKey]: _, ...rest } = prevCart;
+        newCart = rest; 
+      } else {
+        newCart = {
+          ...prevCart,
+          [cartKey]: { product, tier, quantity: quantity }
+        };
+      }
+      
+      // Determine correct storage key
+      AsyncStorage.getItem('actingAsClient').then(clientData => {
+        return clientData ? JSON.parse(clientData).id : AsyncStorage.getItem('userId');
+      }).then(targetId => {
+        const cartKey = targetId ? `cart_${targetId}` : 'cart';
+        AsyncStorage.setItem(cartKey, JSON.stringify(newCart)).catch(e => console.error(e));
+      });
+      return newCart;
+    });
+  }, []);
+
   const cartTotal = Object.values(cart).reduce((total, item) => {
     const price = parseFloat(item.tier.promo_price || item.tier.sell_price);
     return total + (price * item.quantity);
@@ -439,6 +489,7 @@ export default function ProductListScreen({ navigation, route }) {
         search: debouncedSearchQuery,
         pmp: activeFilters.pmp.toString(),
         promotion: activeFilters.promotion.toString(),
+        clearance: (activeFilters.clearance || false).toString(),
       });
 
       if (activeFilters.categories.length > 0) params.append('categories', activeFilters.categories.join(','));
@@ -550,7 +601,16 @@ export default function ProductListScreen({ navigation, route }) {
       }
       
       if (incomingFilters) {
-        setActiveFilters(incomingFilters);
+        // Merge with defaults to ensure all keys exist
+        setActiveFilters({
+          categories: [],
+          subcategories: [],
+          brands: [],
+          pmp: false,
+          promotion: false,
+          clearance: false,
+          ...incomingFilters
+        });
       }
     }
 
@@ -661,9 +721,15 @@ export default function ProductListScreen({ navigation, route }) {
                   >
                     <Text style={styles.quantityButtonText}>-</Text>
                   </TouchableOpacity>
-                  <Text style={styles.quantityValue}>
-                    {cart[`${item.id}-${tier.tier}`]?.quantity || 0}
-                  </Text>
+                  <TextInput
+                    style={styles.quantityInput}
+                    keyboardType="numeric"
+                    value={String(cart[`${item.id}-${tier.tier}`]?.quantity || 0)}
+                    onChangeText={(text) => {
+                      const val = parseInt(text) || 0;
+                      setCartQuantity(item, tier, val);
+                    }}
+                  />
                   <TouchableOpacity 
                     style={styles.quantityButton} 
                     onPress={() => updateCartQuantity(item, tier, 1)}>
@@ -727,27 +793,28 @@ export default function ProductListScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
         )}
-        <View style={styles.searchContainer}>
-          <Icon name="search-outline" size={20} color="#6c757d" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name or SKU..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#6c757d"
-          />
-          <TouchableOpacity style={styles.barcodeButton} onPress={() => setScannerVisible(true)}>
-            <Icon name="camera-outline" size={24} color="#495057" />
-          </TouchableOpacity>
-          
-          <FilterUI 
-            ref={filterRef}
-            activeFilters={activeFilters}
-            categories={categories}
-            subcategories={subcategories}
-            brands={brands}
-            onApply={handleApplyFilters}
-          />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={styles.searchContainer}>
+            <Icon name="search-outline" size={20} color="#6c757d" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#6c757d"
+            />
+            <TouchableOpacity style={styles.barcodeButton} onPress={() => setScannerVisible(true)}>
+              <Icon name="camera-outline" size={22} color="#495057" />
+            </TouchableOpacity>
+            <FilterUI 
+              ref={filterRef}
+              activeFilters={activeFilters}
+              categories={categories}
+              subcategories={subcategories}
+              brands={brands}
+              onApply={handleApplyFilters}
+            />
+          </View>
         </View>
       </View>
       {loading ? (
@@ -806,35 +873,43 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: 'white',
-    padding: 16,
+    padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
   },
+  iconButton: {
+    padding: 5,
+    marginHorizontal: 2,
+  },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f3f5',
+    backgroundColor: '#f8f9fa',
     borderRadius: 10,
-    height: 44,
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    marginHorizontal: 8,
   },
   searchIcon: {
-    marginLeft: 12,
+    marginLeft: 8,
   },
   searchInput: {
     flex: 1,
     height: '100%',
-    paddingHorizontal: 10,
-    fontSize: 16,
+    paddingHorizontal: 8,
+    fontSize: 14,
     color: '#1d3557',
   },
   barcodeButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
   filterButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
@@ -977,13 +1052,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  quantityValue: {
+  quantityInput: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#212529',
-    marginHorizontal: 12,
+    marginHorizontal: 8,
     minWidth: 20,
     textAlign: 'center',
+    paddingVertical: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ced4da',
   },
   footer: {
     position: 'absolute',

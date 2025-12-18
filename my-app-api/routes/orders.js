@@ -96,11 +96,21 @@ router.post('/', async (req, res, next) => {
             targetUserId = req.body.customer_id;
         }
 
+        const { 
+            total_amount, 
+            net_amount, 
+            tax_amount, 
+            delivery_date, 
+            delivery_address, 
+            customer_phone, 
+            notes 
+        } = req.body;
+
         // 1. Insert the main order
         // Using db.query directly because db.connect() is not available on the wrapper
         const orderRes = await db.query(
-            'INSERT INTO orders (user_id, created_by, total_amount, status) VALUES ($1, $2, $3, $4) RETURNING id',
-            [targetUserId, req.user.id, req.body.total_amount, 'order placed']
+            'INSERT INTO orders (user_id, created_by, total_amount, net_amount, tax_amount, delivery_date, delivery_address, customer_phone, notes, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id',
+            [targetUserId, req.user.id, total_amount, net_amount, tax_amount, delivery_date, delivery_address, customer_phone, notes, 'order placed']
         );
         const orderId = orderRes.rows[0].id;
 
@@ -142,7 +152,7 @@ router.get('/:orderId', async (req, res, next) => {
         // Fetch order details along with product info
         // We join orders, order_items, and products tables
         const query = `
-            SELECT o.id, o.order_date as created_at, o.total_amount, o.status,
+            SELECT o.*, o.order_date as created_at,
                    u.username as customer_username, u.name as customer_name,
                    c.username as creator_username, c.name as creator_name,
                    i.id as item_id, i.quantity, i.price, i.tier,
@@ -166,6 +176,12 @@ router.get('/:orderId', async (req, res, next) => {
             id: result.rows[0].id,
             created_at: result.rows[0].created_at,
             total_amount: result.rows[0].total_amount,
+            net_amount: result.rows[0].net_amount,
+            tax_amount: result.rows[0].tax_amount,
+            delivery_date: result.rows[0].delivery_date,
+            delivery_address: result.rows[0].delivery_address,
+            customer_phone: result.rows[0].customer_phone,
+            notes: result.rows[0].notes,
             status: result.rows[0].status,
             customer_username: result.rows[0].customer_username,
             customer_name: result.rows[0].customer_name,

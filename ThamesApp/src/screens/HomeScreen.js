@@ -190,30 +190,28 @@ export default function HomeScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>ThamesCC</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
-          <Icon name="cart-outline" size={28} color="#1d3557" />
+        <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.iconButton}>
+          <Icon name="home-outline" size={26} color="#1d3557" />
         </TouchableOpacity>
-      </View>
-
-      <View style={styles.searchWrapper}>
-        <View style={styles.searchContainer}>
+        
+        <View style={styles.headerSearchContainer}>
           <Icon name="search-outline" size={20} color="#6c757d" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by name or SKU..."
+            placeholder="Search..."
             value={searchText}
             onChangeText={setSearchText}
             onSubmitEditing={handleSearchSubmit}
             placeholderTextColor="#6c757d"
           />
-          <TouchableOpacity style={styles.barcodeButton} onPress={() => navigation.navigate('ProductList', { openScanner: true })}>
-            <Icon name="camera-outline" size={24} color="#495057" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.filterButton} onPress={() => navigation.navigate('ProductList', { openFilters: true, initialSearch: searchText })}>
-            <Icon name="options-outline" size={24} color="#495057" />
+          <TouchableOpacity onPress={() => navigation.navigate('ProductList', { openScanner: true })}>
+            <Icon name="camera-outline" size={22} color="#495057" />
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.iconButton}>
+          <Icon name="cart-outline" size={28} color="#1d3557" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView>
@@ -487,51 +485,37 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    padding: 10,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1d3557',
+  iconButton: {
+    padding: 5,
+    marginHorizontal: 2,
   },
-  searchWrapper: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: '#f4f5f7',
-  },
-  searchContainer: {
+  headerSearchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 10,
-    height: 44,
+    height: 40,
     borderWidth: 1,
     borderColor: '#e9ecef',
+    marginHorizontal: 8,
+    backgroundColor: '#f8f9fa',
   },
   searchIcon: {
-    marginLeft: 12,
+    marginLeft: 8,
   },
   searchInput: {
     flex: 1,
     height: '100%',
-    paddingHorizontal: 10,
-    fontSize: 16,
+    paddingHorizontal: 8,
+    fontSize: 14,
     color: '#1d3557',
-  },
-  barcodeButton: {
-    paddingHorizontal: 12,
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  filterButton: {
-    paddingHorizontal: 12,
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   title: {
     fontSize: 28,

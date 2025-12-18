@@ -11,7 +11,9 @@ router.get('/', async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
 
-    const { search, categories, subcategories, brands, pmp, promotion } = req.query;
+    const { search, categories, subcategories, brands, pmp, promotion, clearance } = req.query;
+
+    console.log('Fetching products with filters:', { search, pmp, promotion, clearance });
 
     let queryText = 'SELECT p.* FROM products p';
     const queryParams = [];
@@ -58,6 +60,11 @@ router.get('/', async (req, res) => {
     // PMP Filter
     if (pmp === 'true') {
       whereClauses.push(`p.pmp_plain = 'PMP'`);
+    }
+
+    // Clearance Filter
+    if (clearance === 'true') {
+      whereClauses.push(`TRIM(p.item) ILIKE '%/R'`);
     }
 
     if (whereClauses.length > 0) {

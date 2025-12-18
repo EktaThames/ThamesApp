@@ -6,7 +6,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import ProductListScreen from './src/screens/ProductListScreen';
 import ProductDetails from './src/screens/ProductDetails'; 
-import CartScreen from './src/screens/CartScreen'; // <-- Import the new CartScreen
+import CartScreen from './src/screens/CartScreen';
 import OrderListScreen from './src/screens/OrderListScreen';
 import OrderDetailScreen from './src/screens/OrderDetailScreen';
 
