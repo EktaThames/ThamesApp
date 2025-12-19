@@ -662,6 +662,10 @@ export default function ProductListScreen({ navigation, route }) {
   // when we are just interacting with the Modal (which updates state)
   const renderProductItem = useCallback(({ item }) => {
     const isExpanded = expandedProductId != null && String(expandedProductId) === String(item.id);
+
+    const isClearance = item.item && item.item.endsWith('/R');
+    const isPromotion = !isClearance && item.pricing && item.pricing.some(p => p.promo_price && parseFloat(p.promo_price) > 0);
+
     return (
       <TouchableOpacity
         style={styles.card}
@@ -669,7 +673,19 @@ export default function ProductListScreen({ navigation, route }) {
       >
         {/* Collapsed View */}
         <View style={styles.collapsedContainer}>
-          <Image source={{ uri: `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${item.item}.webp` }} style={styles.productImage} />
+          <View style={styles.imageContainer}>
+            <Image source={{ uri: `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${item.item}.webp` }} style={styles.productImage} />
+            {isClearance && (
+              <View style={[styles.badge, styles.clearanceBadge]}>
+                <Text style={styles.badgeText}>Sale</Text>
+              </View>
+            )}
+            {isPromotion && (
+              <View style={[styles.badge, styles.promotionBadge]}>
+                <Text style={styles.badgeText}>Sale</Text>
+              </View>
+            )}
+          </View>
           <View style={styles.infoContainer}>
             <Text style={styles.name} numberOfLines={2}>{item.description}</Text>
             <Text style={styles.sku}>
@@ -678,7 +694,9 @@ export default function ProductListScreen({ navigation, route }) {
           </View>
           <View style={styles.priceContainer}>
             {item.pricing && item.pricing.length > 0 && (
-              <Text style={styles.price}>{formatPrice(item.pricing[0].sell_price)}</Text>
+              <Text style={styles.price}>
+                {formatPrice(item.pricing[0].promo_price || item.pricing[0].sell_price)}
+              </Text>
             )}
             <Text style={styles.stock}>Stock: {item.qty_in_stock ?? '0'}</Text>
           </View>
@@ -925,11 +943,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  productImage: {
+  imageContainer: {
     width: 60,
     height: 60,
-    borderRadius: 8,
     marginRight: 16,
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
     backgroundColor: '#f8f9fa',
   },
   collapsedContainer: {
@@ -1088,6 +1110,26 @@ const styles = StyleSheet.create({
   viewCartContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    elevation: 5,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  clearanceBadge: {
+    backgroundColor: '#e63946', // Red
+  },
+  promotionBadge: {
+    backgroundColor: '#fca311', // Orange/Yellow
   },
   emptyContainer: {
     flex: 1,

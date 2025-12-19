@@ -23,7 +23,6 @@ router.get('/', async (req, res) => {
     // Join for promotion filtering if needed
     if (promotion === 'true') {
       queryText += ' JOIN product_pricing pp ON p.id = pp.product_id';
-      whereClauses.push('pp.promo_price IS NOT NULL');
     }
 
     // Search Filter
@@ -62,9 +61,16 @@ router.get('/', async (req, res) => {
       whereClauses.push(`p.pmp_plain = 'PMP'`);
     }
 
-    // Clearance Filter
-    if (clearance === 'true') {
-      whereClauses.push(`TRIM(p.item) ILIKE '%/R'`);
+    // Handle Promotion and Clearance filters
+    const promoClause = `pp.promo_price IS NOT NULL AND pp.promo_price > 0`;
+    const clearanceClause = `TRIM(p.item) ILIKE '%/R'`;
+
+    if (promotion === 'true' && clearance === 'true') {
+        whereClauses.push(`(${promoClause} OR ${clearanceClause})`);
+    } else if (promotion === 'true') {
+        whereClauses.push(promoClause);
+    } else if (clearance === 'true') {
+        whereClauses.push(clearanceClause);
     }
 
     if (whereClauses.length > 0) {

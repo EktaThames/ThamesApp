@@ -204,8 +204,11 @@ export default function HomeScreen({ navigation, route }) {
             onSubmitEditing={handleSearchSubmit}
             placeholderTextColor="#6c757d"
           />
-          <TouchableOpacity onPress={() => navigation.navigate('ProductList', { openScanner: true })}>
+          <TouchableOpacity onPress={() => navigation.navigate('ProductList', { openScanner: true })} style={{ paddingHorizontal: 5 }}>
             <Icon name="camera-outline" size={22} color="#495057" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('ProductList', { openFilters: true, initialSearch: searchText })} style={{ paddingRight: 8, paddingLeft: 5 }}>
+            <Icon name="options-outline" size={22} color="#495057" />
           </TouchableOpacity>
         </View>
 
