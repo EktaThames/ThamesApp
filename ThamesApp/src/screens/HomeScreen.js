@@ -5,11 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
-import { useAuth } from '../context/AuthContext';
 import CustomDrawerContent from './CustomDrawerContent';
 
 export default function HomeScreen({ navigation, route }) {
-  const { user } = useAuth();
+  const [user, setUser] = useState(null);
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -37,6 +36,16 @@ export default function HomeScreen({ navigation, route }) {
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+    };
+    loadUser();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
