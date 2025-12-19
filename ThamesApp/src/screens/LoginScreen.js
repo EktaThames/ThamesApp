@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingVi
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen({ navigation }) {
   const [userType, setUserType] = useState(null); // 'customer', 'sales', 'admin'
@@ -10,6 +11,7 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { signIn } = useAuth();
 
   const handleLogin = async () => {
     // Basic validation
@@ -42,14 +44,8 @@ export default function LoginScreen({ navigation }) {
         throw new Error(data.message || 'Authentication failed!');
       }
 
-      // Store the token securely
-      await AsyncStorage.setItem('userToken', data.token);
-
-      // On successful login, navigate to the main app, passing user data
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Home', params: { user: data.user } }],
-      });
+      // Update global auth state (App.tsx will automatically switch to Home)
+      await signIn(data.token, data.user);
 
     } catch (err) {
       setError(err.message);

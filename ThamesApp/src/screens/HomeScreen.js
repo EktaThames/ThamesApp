@@ -5,9 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
+import { useAuth } from '../context/AuthContext';
+import CustomDrawerContent from './CustomDrawerContent';
 
 export default function HomeScreen({ navigation, route }) {
-  const { user } = route.params || {};
+  const { user } = useAuth();
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -25,6 +27,7 @@ export default function HomeScreen({ navigation, route }) {
   const [customerOrders, setCustomerOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [roleLoading, setRoleLoading] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const handleSearchSubmit = () => {
     navigation.navigate('ProductList', { initialSearch: searchText });
@@ -65,7 +68,7 @@ export default function HomeScreen({ navigation, route }) {
     };
 
     fetchData();
-  }, []);
+  }, [user]);
 
   // Fetch Role-Based Data (Admin or Sales Rep)
   useEffect(() => {
@@ -190,8 +193,8 @@ export default function HomeScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.iconButton}>
-          <Icon name="home-outline" size={26} color="#1d3557" />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.iconButton}>
+          <Icon name="menu-outline" size={28} color="#1d3557" />
         </TouchableOpacity>
         
         <View style={styles.headerSearchContainer}>
@@ -415,6 +418,24 @@ export default function HomeScreen({ navigation, route }) {
               <Text style={styles.closeButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Custom Sidebar Menu Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={menuVisible}
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <View style={styles.menuModalOverlay}>
+          <View style={styles.menuModalContent}>
+            <CustomDrawerContent 
+              navigation={navigation} 
+              onClose={() => setMenuVisible(false)} 
+            />
+          </View>
+          <TouchableOpacity style={styles.menuModalCloseArea} onPress={() => setMenuVisible(false)} />
         </View>
       </Modal>
 
@@ -744,6 +765,10 @@ const styles = StyleSheet.create({
   },
   // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  menuModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', flexDirection: 'row' },
+  menuModalContent: { width: '80%', backgroundColor: 'white', height: '100%' },
+  menuModalCloseArea: { flex: 1 },
+  
   modalContent: { width: '85%', backgroundColor: 'white', borderRadius: 20, padding: 20, alignItems: 'center', elevation: 5 },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1d3557', marginBottom: 5 },
   modalSubtitle: { fontSize: 14, color: '#6c757d', marginBottom: 20 },

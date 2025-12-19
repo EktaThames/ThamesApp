@@ -2,8 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../context/AuthContext';
 
 export default function CustomDrawerContent(props) {
+  const { signOut } = useAuth();
+
   return (
     <DrawerContentScrollView {...props} contentContainerStyle={styles.container}>
       <View style={styles.header}>
@@ -16,42 +19,35 @@ export default function CustomDrawerContent(props) {
           icon={({ color, size }) => <Icon name="receipt-outline" color={color} size={size} />}
           onPress={() => props.navigation.navigate('OrderList')}
         />
-        <DrawerItem
-          label="Favourites"
-          icon={({ color, size }) => <Icon name="heart-outline" color={color} size={size} />}
-          onPress={() => props.navigation.navigate('ProductList', { showFavourites: true })} 
-        />
-        <DrawerItem
-          label="My Details"
-          icon={({ color, size }) => <Icon name="person-outline" color={color} size={size} />}
-          onPress={() => props.navigation.navigate('Home')} 
-        />
       </View>
 
       <View style={styles.divider} />
 
       <View style={styles.section}>
         <DrawerItem
-          label="All Products"
-          icon={({ color, size }) => <Icon name="grid-outline" color={color} size={size} />}
-          onPress={() => props.navigation.navigate('ProductList')}
-        />
-        <DrawerItem
-          label="Brands"
+          label="Brands Filter"
           icon={({ color, size }) => <Icon name="pricetag-outline" color={color} size={size} />}
           onPress={() => props.navigation.navigate('ProductList', { openFilters: true })}
         />
         <DrawerItem
-          label="Categories"
-          icon={({ color, size }) => <Icon name="list-outline" color={color} size={size} />}
-          onPress={() => props.navigation.navigate('ProductList', { openFilters: true })}
-        />
-        <DrawerItem
-          label="Clearance Sell"
+          label="Clearance"
           icon={({ color, size }) => <Icon name="pricetags-outline" color={color} size={size} />}
           onPress={() => props.navigation.navigate('ProductList', { 
             activeFilters: { categories: [], subcategories: [], brands: [], pmp: false, promotion: false, clearance: true } 
           })}
+        />
+        <DrawerItem
+          label="All Products"
+          icon={({ color, size }) => <Icon name="grid-outline" color={color} size={size} />}
+          onPress={() => props.navigation.navigate('ProductList')}
+        />
+      </View>
+
+      <View style={[styles.section, { marginTop: 'auto', marginBottom: 20 }]}>
+        <DrawerItem
+          label="Logout"
+          icon={({ color, size }) => <Icon name="log-out-outline" color="#e63946" size={size} />}
+          onPress={() => signOut()}
         />
       </View>
     </DrawerContentScrollView>
