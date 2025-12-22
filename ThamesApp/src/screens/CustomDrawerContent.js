@@ -17,8 +17,8 @@ export default function CustomDrawerContent({ navigation, onClose }) {
 
   const MenuItem = ({ label, icon, onPress, color = '#1d3557' }) => (
     <TouchableOpacity style={styles.menuItem} onPress={() => {
-      if (onClose) onClose();
-      onPress();
+      if (onClose) { onClose(); }
+      if (onPress) { onPress(); }
     }}>
       <Icon name={icon} size={24} color={color} style={styles.icon} />
       <Text style={[styles.label, { color }]}>{label}</Text>
@@ -41,13 +41,28 @@ export default function CustomDrawerContent({ navigation, onClose }) {
             icon="receipt-outline"
             onPress={() => navigation.navigate('OrderList')}
           />
+          <MenuItem
+            label="My Profile"
+            icon="person-outline"
+            onPress={() => navigation.navigate('MyProfile')}
+          />
         </View>
 
         <View style={styles.divider} />
 
         <View style={styles.section}>
+             <MenuItem
+            label="All Products"
+            icon="grid-outline"
+            onPress={() => navigation.navigate('ProductList')}
+          />
           <MenuItem
-            label="Brands Filter"
+            label="Categories"
+            icon="list-outline"
+            onPress={() => navigation.navigate('ProductList', { openFilters: true })}
+          />
+          <MenuItem
+            label="Brands"
             icon="pricetag-outline"
             onPress={() => navigation.navigate('ProductList', { openFilters: true })}
           />
@@ -58,11 +73,7 @@ export default function CustomDrawerContent({ navigation, onClose }) {
               activeFilters: { categories: [], subcategories: [], brands: [], pmp: false, promotion: false, clearance: true } 
             })}
           />
-          <MenuItem
-            label="All Products"
-            icon="grid-outline"
-            onPress={() => navigation.navigate('ProductList')}
-          />
+         
         </View>
 
         <View style={[styles.section, { marginTop: 40 }]}>

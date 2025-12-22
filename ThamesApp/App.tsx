@@ -9,6 +9,7 @@ import ProductDetails from './src/screens/ProductDetails';
 import CartScreen from './src/screens/CartScreen';
 import OrderListScreen from './src/screens/OrderListScreen';
 import OrderDetailScreen from './src/screens/OrderDetailScreen';
+import MyProfileScreen from './src/screens/MyProfileScreen';
 
 // Define types for better code quality (Optional but recommended standard)
 export type RootStackParamList = {
@@ -18,6 +19,7 @@ export type RootStackParamList = {
   Cart: undefined;
   OrderList: undefined;
   OrderDetail: { orderId: number };
+  MyProfile: undefined;
 };
 
 export type AuthStackParamList = {
@@ -53,6 +55,7 @@ export default function App() {
         <Stack.Screen name="Cart" component={CartScreen} />
         <Stack.Screen name="OrderList" component={OrderListScreen} options={{ headerShown: false }} />
         <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="MyProfile" component={MyProfileScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

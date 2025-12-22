@@ -14,6 +14,7 @@ export default function HomeScreen({ navigation, route }) {
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [imageErrors, setImageErrors] = useState({});
+  const [categoryImageErrors, setCategoryImageErrors] = useState({});
   const [searchText, setSearchText] = useState('');
 
   // Admin & Sales Rep State
@@ -189,14 +190,19 @@ export default function HomeScreen({ navigation, route }) {
     }
   };
 
-  // Helper function to get a relevant icon for each subcategory
-  const getIconForSubcategory = (name) => {
-    // Return a single, consistent icon for all subcategories
-    return 'pricetag-outline';
-  };
-
   const handleImageError = (sku) => {
     setImageErrors(prev => ({ ...prev, [sku]: true }));
+  };
+
+  const handleCategoryImageError = (id) => {
+    setCategoryImageErrors(prev => ({ ...prev, [id]: true }));
+  };
+
+  const getCategoryImageUrl = (item) => {
+    if (!item) return '';
+    // Best Solution: Use the Category ID. This matches the renamed files in S3 (e.g., "12.webp").
+    // This eliminates issues with special characters, spaces, and case sensitivity.
+    return `https://thames-product-images.s3.us-east-1.amazonaws.com/category_images/bagistoimagesprivatewebp/${item.id}.webp`;
   };
 
   return (
@@ -386,7 +392,15 @@ export default function HomeScreen({ navigation, route }) {
                         });
                       }}
                     >
-                      <Icon name={getIconForSubcategory(item.name)} size={32} color="#1d3557" />
+                      {categoryImageErrors[item.id] ? (
+                        <Icon name="image-outline" size={30} color="#ced4da" style={{ marginBottom: 10 }} />
+                      ) : (
+                        <Image 
+                          source={{ uri: getCategoryImageUrl(item) }}
+                          style={styles.categoryImage}
+                          onError={() => handleCategoryImageError(item.id)}
+                        />
+                      )}
                       <Text style={styles.categoryName} numberOfLines={2}>{item.name}</Text>
                     </TouchableOpacity>
                   )}
@@ -441,7 +455,7 @@ export default function HomeScreen({ navigation, route }) {
           <View style={styles.menuModalContent}>
             <CustomDrawerContent 
               navigation={navigation} 
-              onClose={() => setMenuVisible(false)} 
+              onClose={() => setMenuVisible(false)}
             />
           </View>
           <TouchableOpacity style={styles.menuModalCloseArea} onPress={() => setMenuVisible(false)} />
@@ -459,12 +473,12 @@ export default function HomeScreen({ navigation, route }) {
           <View style={[styles.modalContent, { maxHeight: '80%' }]}>
                 <Text style={styles.modalTitle}>Customer Details</Text>
                 <View style={{ width: '100%', marginBottom: 20 }}>
-                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1d3557' }}>Name:</Text>
-                  <Text style={{ fontSize: 16, color: '#495057', marginBottom: 10 }}>{selectedCustomer?.name || selectedCustomer?.username}</Text>
-                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1d3557' }}>Email:</Text>
-                  <Text style={{ fontSize: 16, color: '#495057', marginBottom: 10 }}>{selectedCustomer?.email}</Text>
-                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1d3557' }}>Address:</Text>
-                  <Text style={{ fontSize: 16, color: '#495057', marginBottom: 10 }}>{selectedCustomer?.address || 'N/A'}</Text>
+                  <Text style={styles.detailLabel}>Name</Text>
+                  <Text style={styles.detailValue}>{selectedCustomer?.name || selectedCustomer?.username}</Text>
+                  <Text style={styles.detailLabel}>Email</Text>
+                  <Text style={styles.detailValue}>{selectedCustomer?.email}</Text>
+                  <Text style={styles.detailLabel}>Address</Text>
+                  <Text style={styles.detailValue}>{selectedCustomer?.address || 'N/A'}</Text>
                 </View>
 
                 <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1d3557', alignSelf: 'flex-start', marginBottom: 10 }}>Order History</Text>
@@ -625,6 +639,11 @@ const styles = StyleSheet.create({
     color: '#1d3557',
     textAlign: 'center',
     marginTop: 8,
+  },
+  categoryImage: {
+    width: 50,
+    height: 50,
+    resizeMode: 'contain',
   },
   productCard: {
     backgroundColor: 'white',
@@ -797,6 +816,17 @@ const styles = StyleSheet.create({
   orderHistoryDate: { fontSize: 12, color: '#6c757d' },
   orderHistoryAmount: { fontWeight: 'bold', color: '#2a9d8f' },
   orderHistoryStatus: { fontSize: 12, color: '#6c757d', textTransform: 'capitalize' },
+  detailLabel: {
+    fontSize: 14,
+    color: '#6c757d',
+    marginTop: 10,
+  },
+  detailValue: {
+    fontSize: 16,
+    color: '#1d3557',
+    marginBottom: 5,
+    fontWeight: '500',
+  },
   orderDetailItem: {
     flexDirection: 'row',
     alignItems: 'center',
