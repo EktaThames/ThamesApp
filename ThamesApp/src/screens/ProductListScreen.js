@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef, forwardRef, useImperativeHandle, useLayoutEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Modal, ScrollView, TouchableWithoutFeedback, Image, InteractionManager, SectionList } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Modal, ScrollView, TouchableWithoutFeedback, Image, InteractionManager, SectionList, Share, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -339,6 +339,7 @@ export default function ProductListScreen({ navigation, route }) {
   const [scanError, setScanError] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
   const [actingAsClient, setActingAsClient] = useState(null);
+  const [imageErrors, setImageErrors] = useState({});
 
   const filterRef = useRef(null);
 
@@ -357,18 +358,88 @@ export default function ProductListScreen({ navigation, route }) {
     ...(route.params?.activeFilters || {})
   });
 
+  const shareMissingImages = useCallback(async () => {
+    const missing = Object.keys(imageErrors);
+    if (missing.length === 0) return;
+    try {
+      await Share.share({
+        message: `Missing Images Report (${missing.length}):\n\n${missing.join('\n')}`,
+        title: 'Missing Product Images'
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  }, [imageErrors]);
+
+  const scanImages = useCallback(async () => {
+    if (products.length === 0) {
+      Alert.alert("No Products", "No products loaded to scan.");
+      return;
+    }
+
+    Alert.alert(
+      "Scan Images",
+      `Scan ${products.length} loaded products for missing images?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Scan", 
+          onPress: async () => {
+            setLoading(true);
+            const newErrors = {};
+            const BATCH_SIZE = 10;
+            
+            // Filter out products we already know have errors to save time
+            const productsToCheck = products.filter(p => !imageErrors[p.item]);
+
+            for (let i = 0; i < productsToCheck.length; i += BATCH_SIZE) {
+              const batch = productsToCheck.slice(i, i + BATCH_SIZE);
+              await Promise.all(batch.map(async (p) => {
+                const url = `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${p.item}.webp`;
+                try {
+                  const res = await fetch(url, { method: 'HEAD' });
+                  if (res.status !== 200) {
+                    newErrors[p.item] = true;
+                  }
+                } catch (e) {
+                  newErrors[p.item] = true;
+                }
+              }));
+            }
+
+            setImageErrors(prev => ({ ...prev, ...newErrors }));
+            setLoading(false);
+            
+            const count = Object.keys(newErrors).length;
+            Alert.alert("Scan Complete", count > 0 ? `Found ${count} new missing images.` : "No new missing images found.");
+          }
+        }
+      ]
+    );
+  }, [products, imageErrors]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Cart')}
-          style={{ marginRight: 16 }}
-        >
-          <Icon name="cart-outline" size={28} color="#1d3557" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {/* <TouchableOpacity onPress={scanImages} style={{ marginRight: 16 }}>
+            <Icon name="images-outline" size={26} color="#1d3557" />
+          </TouchableOpacity> */}
+          {/* {Object.keys(imageErrors).length > 0 && (
+            <TouchableOpacity onPress={shareMissingImages} style={{ marginRight: 16 }}>
+              <Icon name="alert-circle-outline" size={26} color="#e63946" />
+            </TouchableOpacity>
+          )} */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Cart')}
+            style={{ marginRight: 16 }}
+          >
+            <Icon name="cart-outline" size={28} color="#1d3557" />
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [navigation]);
+  }, [navigation, imageErrors, shareMissingImages, scanImages]);
 
   // Helper to format price
   const formatPrice = (price) => {
@@ -657,6 +728,10 @@ export default function ProductListScreen({ navigation, route }) {
     setActiveFilters(newFilters);
   }, []);
 
+  const handleImageError = useCallback((sku) => {
+    console.log('Missing Image SKU:', sku);
+    setImageErrors(prev => ({ ...prev, [sku]: true }));
+  }, []);
 
   // Memoize the renderItem function to prevent the FlatList from re-rendering
   // when we are just interacting with the Modal (which updates state)
@@ -674,7 +749,13 @@ export default function ProductListScreen({ navigation, route }) {
         {/* Collapsed View */}
         <View style={styles.collapsedContainer}>
           <View style={styles.imageContainer}>
-            <Image source={{ uri: `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${item.item}.webp` }} style={styles.productImage} />
+            {imageErrors[item.item] ? (
+              <View style={[styles.productImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f9fa' }]}>
+                <Icon name="image-outline" size={24} color="#ced4da" />
+              </View>
+            ) : (
+              <Image source={{ uri: `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${item.item}.webp` }} style={styles.productImage} onError={() => handleImageError(item.item)} />
+            )}
             {isClearance && (
               <View style={[styles.badge, styles.clearanceBadge]}>
                 <Text style={styles.badgeText}>Sale</Text>
@@ -760,7 +841,7 @@ export default function ProductListScreen({ navigation, route }) {
         )}
       </TouchableOpacity>
     );
-  }, [expandedProductId, cart, updateCartQuantity]);
+  }, [expandedProductId, cart, updateCartQuantity, imageErrors, handleImageError]);
 
   return (
     <>

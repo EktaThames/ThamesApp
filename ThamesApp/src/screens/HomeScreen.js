@@ -191,6 +191,7 @@ export default function HomeScreen({ navigation, route }) {
   };
 
   const handleImageError = (sku) => {
+    console.log('Missing Image SKU:', sku);
     setImageErrors(prev => ({ ...prev, [sku]: true }));
   };
 

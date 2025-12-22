@@ -11,7 +11,7 @@ const cleanDate = (v) => {
   if (!v || v.toString().trim() === "") return null;
   const str = v.toString().trim();
   // Convert DD-MM-YYYY to YYYY-MM-DD
-  const parts = str.split('-');
+  const parts = str.replace(/\//g, '-').split('-');
   if (parts.length === 3 && parts[2].length === 4) {
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   }
