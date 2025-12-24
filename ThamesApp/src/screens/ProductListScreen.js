@@ -718,7 +718,7 @@ export default function ProductListScreen({ navigation, route }) {
         setScannedBarcode('');
       } else {
         // If scanning with camera, show Alert since modal might be closing or camera active
-        Alert.alert('Product not found', product.message || 'Product not found.');
+        Alert.alert('Product not found', `Scanned: ${barcodeToSearch}\n\n${product.message || 'Product not found.'}`);
         setScanError(product.message || 'Product not found.');
       }
     } catch (error) {

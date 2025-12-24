@@ -179,11 +179,31 @@ router.get('/by-barcode/:barcode', async (req, res) => {
 
     try {
         // 1. Find the product_id from the product_barcodes table
-        const barcodeResult = await db.query('SELECT product_id FROM product_barcodes WHERE barcode = $1', [barcode]);
+        let barcodeResult = await db.query('SELECT product_id FROM product_barcodes WHERE barcode = $1', [barcode]);
+        
+        // Fallback 1: Check if it matches a product SKU (item) directly
+        if (barcodeResult.rows.length === 0) {
+             const skuResult = await db.query('SELECT id FROM products WHERE item = $1', [barcode]);
+             if (skuResult.rows.length > 0) {
+                 barcodeResult = { rows: [{ product_id: skuResult.rows[0].id }] };
+             }
+        }
+
+        // Fallback 2: Handle UPC vs EAN (12 vs 13 digits) mismatch
+        if (barcodeResult.rows.length === 0) {
+             if (barcode.length === 12) {
+                 // Try adding leading zero (UPC -> EAN)
+                 barcodeResult = await db.query('SELECT product_id FROM product_barcodes WHERE barcode = $1', ['0' + barcode]);
+             } else if (barcode.length === 13 && barcode.startsWith('0')) {
+                 // Try removing leading zero (EAN -> UPC)
+                 barcodeResult = await db.query('SELECT product_id FROM product_barcodes WHERE barcode = $1', [barcode.substring(1)]);
+             }
+        }
+
         const barcodeEntry = barcodeResult.rows[0];
 
         if (!barcodeEntry) {
-            return res.status(404).json({ message: 'Product not found for this barcode.' });
+            return res.status(404).json({ message: `Product not found for barcode: ${barcode}` });
         }
 
         const productId = barcodeEntry.product_id;
