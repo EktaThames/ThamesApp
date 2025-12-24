@@ -20,8 +20,9 @@ const cleanDate = (v) => {
 const cleanBarcode = (v) => {
   if (!v) return null;
   let str = v.toString().trim();
-  if (/e\+/i.test(str)) {
-    str = Number(str).toFixed(0);
+  if (/e[+-]/i.test(str)) {
+    const num = Number(str);
+    if (!isNaN(num)) str = num.toFixed(0);
   }
   return str.replace(/[^0-9]/g, '');
 };

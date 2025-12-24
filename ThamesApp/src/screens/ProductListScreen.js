@@ -5,6 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../config/api';
+import BarcodeScannerScreen from './BarcodeScannerScreen';
 
 // Optimized Chip Component (Only re-renders if selection changes)
 const FilterChip = React.memo(({ id, label, isSelected, onToggle }) => (
@@ -700,12 +701,14 @@ export default function ProductListScreen({ navigation, route }) {
     }
   }, [route.params]);
 
-  const handleBarcodeSearch = async () => {
-    if (!scannedBarcode) return;
+  const handleBarcodeSearch = async (code) => {
+    const barcodeToSearch = typeof code === 'string' ? code : scannedBarcode;
+    if (!barcodeToSearch) return;
+
     setScanLoading(true);
     setScanError('');
     try {
-      const response = await fetch(`${API_URL}/api/products/by-barcode/${scannedBarcode}`);
+      const response = await fetch(`${API_URL}/api/products/by-barcode/${barcodeToSearch}`);
       const product = await response.json();
 
       if (response.ok) {
@@ -714,10 +717,12 @@ export default function ProductListScreen({ navigation, route }) {
         setScannerVisible(false); // Close the modal
         setScannedBarcode('');
       } else {
+        // If scanning with camera, show Alert since modal might be closing or camera active
+        Alert.alert('Product not found', product.message || 'Product not found.');
         setScanError(product.message || 'Product not found.');
       }
     } catch (error) {
-      setScanError('An error occurred. Please try again.');
+      Alert.alert('Error', 'An error occurred. Please try again.');
       console.error('Barcode search error:', error);
     } finally {
       setScanLoading(false);
@@ -849,37 +854,18 @@ export default function ProductListScreen({ navigation, route }) {
       {/* Barcode Scanner Modal */}
       <Modal
         animationType="slide"
-        transparent={true}
+        transparent={false}
         visible={isScannerVisible}
         onRequestClose={() => setScannerVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.scannerModalContent}>
-            <Text style={styles.modalTitle}>Scan Barcode</Text>
-            <Text style={styles.scannerInstruction}>
-              Enter the barcode number below to find a product.
-            </Text>
-            <TextInput
-              style={styles.barcodeInput}
-              placeholder="Enter EAN..."
-              value={scannedBarcode}
-              onChangeText={setScannedBarcode}
-              keyboardType="numeric"
-              autoFocus
-            />
-            {scanError ? <Text style={styles.scanErrorText}>{scanError}</Text> : null}
-            <TouchableOpacity style={styles.primaryButton} onPress={handleBarcodeSearch} disabled={scanLoading}>
-              {scanLoading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Find Product</Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setScannerVisible(false)}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <BarcodeScannerScreen
+          onClose={() => setScannerVisible(false)}
+          onBarcodeScanned={(code) => {
+            // This callback is triggered from the scanner
+            setScannerVisible(false); // Close the modal
+            handleBarcodeSearch(code); // Process the code
+          }}
+        />
       </Modal>
 
       <SafeAreaView style={styles.container}>
@@ -1374,5 +1360,13 @@ const styles = StyleSheet.create({
     color: '#2a9d8f',
     fontWeight: '600',
     marginRight: 4,
+  },
+  closeCameraButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    padding: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
   },
 });
