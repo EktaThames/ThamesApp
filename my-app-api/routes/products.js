@@ -179,13 +179,13 @@ router.get('/by-barcode/:barcode', async (req, res) => {
 
     try {
         // 1. Find the product_id from the product_barcodes table
-        let barcodeResult = await db.query('SELECT product_id FROM product_barcodes WHERE barcode = $1', [barcode]);
+        let barcodeResult = await db.query('SELECT product_id, tier FROM product_barcodes WHERE barcode = $1', [barcode]);
         
         // Fallback 1: Check if it matches a product SKU (item) directly
         if (barcodeResult.rows.length === 0) {
              const skuResult = await db.query('SELECT id FROM products WHERE item = $1', [barcode]);
              if (skuResult.rows.length > 0) {
-                 barcodeResult = { rows: [{ product_id: skuResult.rows[0].id }] };
+                 barcodeResult = { rows: [{ product_id: skuResult.rows[0].id, tier: null }] };
              }
         }
 
@@ -193,10 +193,10 @@ router.get('/by-barcode/:barcode', async (req, res) => {
         if (barcodeResult.rows.length === 0) {
              if (barcode.length === 12) {
                  // Try adding leading zero (UPC -> EAN)
-                 barcodeResult = await db.query('SELECT product_id FROM product_barcodes WHERE barcode = $1', ['0' + barcode]);
+                 barcodeResult = await db.query('SELECT product_id, tier FROM product_barcodes WHERE barcode = $1', ['0' + barcode]);
              } else if (barcode.length === 13 && barcode.startsWith('0')) {
                  // Try removing leading zero (EAN -> UPC)
-                 barcodeResult = await db.query('SELECT product_id FROM product_barcodes WHERE barcode = $1', [barcode.substring(1)]);
+                 barcodeResult = await db.query('SELECT product_id, tier FROM product_barcodes WHERE barcode = $1', [barcode.substring(1)]);
              }
         }
 
@@ -207,6 +207,7 @@ router.get('/by-barcode/:barcode', async (req, res) => {
         }
 
         const productId = barcodeEntry.product_id;
+        const scannedTier = barcodeEntry.tier;
 
         // 2. Fetch the full product details using the found product_id
         const productResult = await db.query('SELECT * FROM products WHERE id = $1', [productId]);
@@ -222,7 +223,13 @@ router.get('/by-barcode/:barcode', async (req, res) => {
 
         const imageUrl = `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${product.item}.webp`;
 
-        res.json({ ...product, image_url: imageUrl, barcodes: allBarcodesResult.rows, pricing: allPricingResult.rows });
+        res.json({ 
+            ...product, 
+            image_url: imageUrl, 
+            barcodes: allBarcodesResult.rows, 
+            pricing: allPricingResult.rows,
+            scanned_tier: scannedTier 
+        });
     } catch (err) {
         console.error('Error fetching product by barcode:', err.message);
         res.status(500).json({ message: 'Server error fetching product by barcode.' });
