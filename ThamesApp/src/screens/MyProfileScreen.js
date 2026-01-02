@@ -102,6 +102,7 @@ export default function MyProfileScreen({ navigation }) {
           onPress: async () => {
             await AsyncStorage.removeItem('userToken');
             await AsyncStorage.removeItem('userData');
+            await AsyncStorage.removeItem('userId');
             navigation.reset({
               index: 0,
               routes: [{ name: 'Login' }],

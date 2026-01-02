@@ -1,5 +1,5 @@
 import React, { useState, useLayoutEffect, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, Image, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, Image, TextInput, ScrollView, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,6 +10,7 @@ export default function CartScreen({ route, navigation }) {
   const [cart, setCart] = useState(initialCart);
   const [isLoading, setIsLoading] = useState(false);
   const [actingAsClient, setActingAsClient] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   
   const [deliveryDate, setDeliveryDate] = useState(new Date(Date.now() + 86400000).toISOString().split('T')[0]); // Default tomorrow
   const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -29,29 +30,40 @@ export default function CartScreen({ route, navigation }) {
         const client = JSON.parse(clientData);
         setActingAsClient(client);
         targetId = client.id;
-        // Pre-fill from client data
-        if (client.address) setDeliveryAddress(client.address);
-        if (client.phone) setCustomerPhone(client.phone); // Assuming phone exists on user object
+        // Pre-fill from client data with robust field checking
+        const addr = client.address || client.billing_address || client.address_line_1 || client.street || '';
+        if (addr) setDeliveryAddress(addr);
+        
+        const ph = client.phone || client.mobile || client.contact_number || client.telephone || client.phone_number || '';
+        if (ph) setCustomerPhone(ph);
       } else {
         targetId = await AsyncStorage.getItem('userId');
+        if (!targetId) {
+          const userData = await AsyncStorage.getItem('userData');
+          if (userData) {
+            const user = JSON.parse(userData);
+            targetId = String(user.id);
+            await AsyncStorage.setItem('userId', targetId);
+          }
+        }
         // Fetch user details to pre-fill
         if (targetId) {
           try {
             const token = await AsyncStorage.getItem('userToken');
-            // We need an endpoint to get single user details, or we can use the list if we are admin/sales
-            // For now, let's try to use what we have or leave blank if not available easily
-            // If you have a /api/users/me endpoint that would be ideal.
-            // Assuming we might not have it, we leave it blank or user fills it.
-            const response = await fetch(`${API_URL}/api/users`, {
+            // Use /api/users/me to get the current user's latest details directly from DB
+            const response = await fetch(`${API_URL}/api/users/me`, {
               headers: { Authorization: `Bearer ${token}` }
             });
-            const users = await response.json();
-            if (Array.isArray(users)) {
-              const currentUser = users.find(u => String(u.id) === String(targetId));
-              if (currentUser) {
-                if (currentUser.address) setDeliveryAddress(currentUser.address);
-                if (currentUser.phone) setCustomerPhone(currentUser.phone);
-              }
+            
+            if (response.ok) {
+              const currentUser = await response.json();
+              const userData = currentUser.user || currentUser.data || currentUser;
+              
+              const addr = userData.address || userData.billing_address || userData.address_line_1 || userData.street || '';
+              if (addr) setDeliveryAddress(addr);
+
+              const ph = userData.phone || userData.mobile || userData.contact_number || userData.telephone || userData.phone_number || '';
+              if (ph) setCustomerPhone(ph);
             }
           } catch (e) {
             console.log("Error fetching user details", e);
@@ -208,7 +220,6 @@ export default function CartScreen({ route, navigation }) {
         throw new Error(result.message || 'Failed to place order.');
       }
 
-      Alert.alert('Success', 'Your order has been placed successfully!');
       setCart({});
       onCartUpdate({}); // Clear the cart
       
@@ -221,7 +232,7 @@ export default function CartScreen({ route, navigation }) {
         await AsyncStorage.removeItem('actingAsClient');
       }
 
-      navigation.navigate('ProductList'); // Go back to product list
+      setShowSuccessModal(true);
 
     } catch (error) {
       Alert.alert('Error', error.message);
@@ -380,6 +391,30 @@ export default function CartScreen({ route, navigation }) {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Success Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showSuccessModal}
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModalContent}>
+            <View style={styles.successIconContainer}>
+              <Icon name="checkmark-outline" size={50} color="white" />
+            </View>
+            <Text style={styles.successTitle}>Order Placed!</Text>
+            <Text style={styles.successMessage}>Your order has been successfully placed.</Text>
+            <TouchableOpacity style={styles.successButton} onPress={() => {
+              setShowSuccessModal(false);
+              navigation.navigate('ProductList');
+            }}>
+              <Text style={styles.successButtonText}>Continue Shopping</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -426,4 +461,69 @@ const styles = StyleSheet.create({
   grossRow: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#e9ecef' },
   grossLabel: { fontSize: 18, fontWeight: 'bold', color: '#1d3557' },
   grossValue: { fontSize: 18, fontWeight: 'bold', color: '#2a9d8f' },
+  
+  // Success Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successModalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  successIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#2a9d8f',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#2a9d8f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  successTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1d3557',
+    marginBottom: 12,
+  },
+  successMessage: {
+    fontSize: 16,
+    color: '#6c757d',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  successButton: {
+    backgroundColor: '#1d3557',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#1d3557',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  successButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });

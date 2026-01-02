@@ -1,6 +1,6 @@
 // Inside HomeScreen.js
 import React, { useEffect, useState, useLayoutEffect } from 'react';
-import { View, Button, StyleSheet, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Image, TextInput, Modal, Alert } from 'react-native';
+import { View, Button, StyleSheet, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Image, TextInput, Modal, Alert, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -203,42 +203,48 @@ export default function HomeScreen({ navigation, route }) {
     if (!item) return '';
     // Best Solution: Use the Category ID. This matches the renamed files in S3 (e.g., "12.webp").
     // This eliminates issues with special characters, spaces, and case sensitivity.
-    return `https://thames-product-images.s3.us-east-1.amazonaws.com/category_images/bagistoimagesprivatewebp/${item.id}.webp`;
+    return `https://thames-product-images.s3.us-east-1.amazonaws.com/category_images/${item.id}.webp`;
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="white" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.iconButton}>
-          <Icon name="menu-outline" size={28} color="#1d3557" />
+          <Icon name="menu-outline" size={26} color="#1d3557" />
         </TouchableOpacity>
         
         <View style={styles.headerSearchContainer}>
-          <Icon name="search-outline" size={20} color="#6c757d" style={styles.searchIcon} />
+          <Icon name="search-outline" size={18} color="#6c757d" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search..."
+            placeholder="Search products..."
             value={searchText}
             onChangeText={setSearchText}
             onSubmitEditing={handleSearchSubmit}
             placeholderTextColor="#6c757d"
           />
           <TouchableOpacity onPress={() => navigation.navigate('ProductList', { openScanner: true })} style={{ paddingHorizontal: 5 }}>
-            <Icon name="camera-outline" size={22} color="#495057" />
+            <Icon name="scan-outline" size={20} color="#495057" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('ProductList', { openFilters: true, initialSearch: searchText })} style={{ paddingRight: 8, paddingLeft: 5 }}>
-            <Icon name="options-outline" size={22} color="#495057" />
+            <Icon name="options-outline" size={20} color="#495057" />
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.iconButton}>
-          <Icon name="cart-outline" size={28} color="#1d3557" />
+          <Icon name="cart-outline" size={26} color="#1d3557" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView>
-        <View style={styles.bannerPlaceholder}>
-          <Text style={styles.bannerPlaceholderText}>Banner Placeholder</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
+        {/* Hero Section */}
+        <View style={styles.heroContainer}>
+          <View style={styles.heroContent}>
+            <Text style={styles.heroTitle}>Hello, {user?.name?.split(' ')[0] || user?.username || 'Guest'} 👋</Text>
+            <Text style={styles.heroSubtitle}>Find the best products for your business today.</Text>
+          </View>
+          <Icon name="cube-outline" size={60} color="rgba(255,255,255,0.2)" style={styles.heroIcon} />
         </View>
 
         {/* Admin Section: Manage Customers */}
@@ -261,7 +267,9 @@ export default function HomeScreen({ navigation, route }) {
                       fetchCustomerOrders(item.id);
                     }}
                   >
-                    <Icon name="person-circle-outline" size={40} color="#1d3557" />
+                    <View style={styles.avatarContainer}>
+                      <Text style={styles.avatarText}>{item.name?.charAt(0) || item.username?.charAt(0) || 'C'}</Text>
+                    </View>
                     <Text style={styles.adminCardTitle} numberOfLines={1}>{item.name || item.username || 'Customer'}</Text>
                     <Text style={styles.adminCardSubtitle}>
                       {item.sales_rep_name ? `Rep: ${item.sales_rep_name}` : 'Unassigned'}
@@ -270,7 +278,7 @@ export default function HomeScreen({ navigation, route }) {
                       style={styles.assignButton}
                       onPress={() => { setSelectedCustomer(item); setAssignModalVisible(true); }}
                     >
-                      <Text style={styles.assignButtonText}>Assign Rep</Text>
+                      <Text style={styles.assignButtonText}>Assign</Text>
                     </TouchableOpacity>
                   </TouchableOpacity>
                 )}
@@ -300,7 +308,9 @@ export default function HomeScreen({ navigation, route }) {
                       fetchCustomerOrders(item.id);
                     }}
                   >
-                    <Icon name="briefcase" size={40} color="#2a9d8f" />
+                    <View style={[styles.avatarContainer, { backgroundColor: '#e0f4f1' }]}>
+                      <Icon name="briefcase-outline" size={24} color="#2a9d8f" />
+                    </View>
                     <Text style={styles.adminCardTitle} numberOfLines={1}>{item.name || item.username || 'Customer'}</Text>
                     <Text style={styles.adminCardSubtitle}>{item.email}</Text>
                     <View style={styles.statusBadge}>
@@ -331,7 +341,7 @@ export default function HomeScreen({ navigation, route }) {
               horizontal
               showsHorizontalScrollIndicator={false}
               renderItem={({ item }) => (
-                <TouchableOpacity style={styles.productCard} onPress={() => navigation.navigate('ProductList', { expandedProductId: item.id })}>
+                <TouchableOpacity style={styles.productCard} activeOpacity={0.9} onPress={() => navigation.navigate('ProductList', { expandedProductId: item.id })}>
                   {imageErrors[item.item] ? (
                     <View style={styles.productImagePlaceholder}>
                       <Icon name="image-outline" size={40} color="#ced4da" />
@@ -344,28 +354,25 @@ export default function HomeScreen({ navigation, route }) {
                     <Text style={styles.productSize} numberOfLines={1}>{item.pack_description}</Text>
                     <View style={styles.cardFooter}>
                       {item.pricing && item.pricing.length > 0 && (
-                        <Text style={styles.productPrice}>£{parseFloat(item.pricing[0].sell_price).toFixed(2)}</Text>
+                        <Text style={styles.productPrice}>{parseFloat(item.pricing[0].sell_price).toFixed(2)}</Text>
                       )}
                     </View>
                   </View>
                   <TouchableOpacity style={styles.addButton} onPress={() => alert(`Added ${item.description}`)}>
-                    <Icon name="add" size={22} color="white" />
+                    <Icon name="add" size={20} color="white" />
                   </TouchableOpacity>
                 </TouchableOpacity>
               )}
               contentContainerStyle={{ paddingHorizontal: 16 }}
             />
           )}
-          <View style={styles.content}>
-            <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('ProductList')}>
-              <Text style={styles.primaryButtonText}>View All Products</Text>
-              <Icon name="arrow-forward" size={16} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('OrderList')}>
-              <Text style={styles.secondaryButtonText}>My Orders</Text>
-              <Icon name="receipt-outline" size={16} color="#1d3557" />
-            </TouchableOpacity>
-          </View>
+        </View>
+
+        <View style={styles.content}>
+          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('ProductList')}>
+            <Text style={styles.primaryButtonText}>Browse All Products</Text>
+            <Icon name="arrow-forward" size={18} color="white" />
+          </TouchableOpacity>
         </View>
 
         {/* Shop by Category Section */}
@@ -394,7 +401,9 @@ export default function HomeScreen({ navigation, route }) {
                       }}
                     >
                       {categoryImageErrors[item.id] ? (
-                        <Icon name="image-outline" size={30} color="#ced4da" style={{ marginBottom: 10 }} />
+                        <View style={styles.categoryIconPlaceholder}>
+                           <Icon name="grid-outline" size={24} color="#a0aec0" />
+                        </View>
                       ) : (
                         <Image 
                           source={{ uri: getCategoryImageUrl(item) }}
@@ -529,31 +538,33 @@ export default function HomeScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f5f7',
+    backgroundColor: '#F8F9FC',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 4,
+    zIndex: 10,
   },
   iconButton: {
-    padding: 5,
-    marginHorizontal: 2,
+    padding: 4,
   },
   headerSearchContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    height: 40,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    marginHorizontal: 8,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F1F3F6',
+    borderRadius: 12,
+    height: 44,
+    marginHorizontal: 12,
+    paddingHorizontal: 4,
   },
   searchIcon: {
     marginLeft: 8,
@@ -565,54 +576,71 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1d3557',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1d3557',
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 10,
-  },
-  bannerPlaceholder: {
-    height: 180,
-    backgroundColor: '#e9ecef',
-    justifyContent: 'center',
+  heroContainer: {
+    backgroundColor: '#1d3557',
+    borderRadius: 20,
+    margin: 16,
+    padding: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#1d3557',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
   },
-  bannerPlaceholderText: {
-    fontSize: 18,
-    color: '#6c757d',
-    fontWeight: '500',
+  heroContent: {
+    flex: 1,
+    zIndex: 2,
   },
-  section: {
-    paddingTop: 30, // Use paddingTop for the first section
-  },
-  categorySection: {
-    marginBottom: 20, // Space between each category and its slider
-  },
-  mainSectionTitle: {
+  heroTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#1d3557',
-    paddingHorizontal: 16,
-    marginBottom: 15,
+    color: 'white',
+    marginBottom: 8,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: '#E2E8F0',
+    lineHeight: 20,
+  },
+  heroIcon: {
+    position: 'absolute',
+    right: -10,
+    bottom: -10,
+    transform: [{ rotate: '-15deg' }],
+  },
+  section: {
+    marginBottom: 24,
+  },
+  categorySection: {
+    marginBottom: 24,
+  },
+  mainSectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A202C',
+    marginLeft: 16,
+    marginBottom: 16,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   trendingSectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1d3557',
+    fontWeight: '700',
+    color: '#1A202C',
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'normal',
-    color: '#1d3557',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2D3748',
   },
   viewAllButton: {
     fontSize: 14,
@@ -620,24 +648,24 @@ const styles = StyleSheet.create({
     color: '#2a9d8f',
   },
   categoryCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    width: 110,
-    height: 110,
-    marginRight: 12,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 16,
+    width: 100,
+    height: 120,
+    marginRight: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 8,
+    padding: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   categoryName: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
-    color: '#1d3557',
+    color: '#4A5568',
     textAlign: 'center',
     marginTop: 8,
   },
@@ -646,78 +674,100 @@ const styles = StyleSheet.create({
     height: 50,
     resizeMode: 'contain',
   },
-  productCard: {
+  categoryIconPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: 'white',
-    borderRadius: 12,
-    width: 170,
-    marginRight: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  productImagePlaceholder: {
-    width: '100%',
-    height: 100,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  productCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    width: 160,
+    marginRight: 16,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  productImagePlaceholder: {
+    width: '100%',
+    height: 120,
+    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   productImage: {
     width: '100%',
-    height: 100,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    backgroundColor: '#f8f9fa', // A fallback color
+    height: 120,
+    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+    marginBottom: 12,
+    resizeMode: 'contain',
   },
   productInfo: {
-    padding: 12,
+    paddingHorizontal: 4,
   },
   productName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#212529',
-    height: 36, // Reserve space for 2 lines
+    fontWeight: '700',
+    color: '#2D3748',
+    height: 40,
+    marginBottom: 4,
   },
   productSize: {
     fontSize: 12,
-    color: '#6c757d',
-    marginTop: 2,
+    color: '#A0AEC0',
+    marginBottom: 8,
   },
   cardFooter: {
-    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   productPrice: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#2a9d8f',
   },
   addButton: {
     position: 'absolute',
-    bottom: 12,
-    right: 12,
+    bottom: 10,
+    right: 10,
     backgroundColor: '#2a9d8f',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4, // Add shadow for Android
+    shadowColor: '#2a9d8f',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   content: {
     paddingHorizontal: 16,
-    marginTop: 20,
+    marginBottom: 24,
   },
   primaryButton: {
     backgroundColor: '#1d3557',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#1d3557',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   primaryButtonText: {
     color: 'white',
@@ -745,52 +795,68 @@ const styles = StyleSheet.create({
   // Admin/Rep Styles
   adminCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 16,
     width: 160,
     padding: 16,
-    marginRight: 12,
+    marginRight: 16,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  avatarContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#1d3557',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  avatarText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   adminCardTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#1d3557',
-    marginTop: 8,
+    fontWeight: '700',
+    color: '#2D3748',
     textAlign: 'center',
+    marginBottom: 4,
   },
   adminCardSubtitle: {
     fontSize: 12,
-    color: '#6c757d',
+    color: '#718096',
     marginBottom: 12,
     textAlign: 'center',
   },
   assignButton: {
-    backgroundColor: '#1d3557',
+    backgroundColor: '#F7FAFC',
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   assignButtonText: {
-    color: 'white',
+    color: '#1d3557',
     fontSize: 12,
     fontWeight: '600',
   },
   statusBadge: {
-    backgroundColor: '#e0f4f1',
+    backgroundColor: '#E6FFFA',
     paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
     marginTop: 4,
   },
   statusText: {
     color: '#2a9d8f',
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },

@@ -462,6 +462,14 @@ export default function ProductListScreen({ navigation, route }) {
             targetId = client.id;
           } else {
             targetId = await AsyncStorage.getItem('userId');
+            if (!targetId) {
+              const userData = await AsyncStorage.getItem('userData');
+              if (userData) {
+                const user = JSON.parse(userData);
+                targetId = String(user.id);
+                await AsyncStorage.setItem('userId', targetId);
+              }
+            }
             setActingAsClient(null);
           }
           
@@ -954,13 +962,18 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa', // A slightly lighter, cleaner background
+    backgroundColor: '#F8F9FC',
   },
   header: {
     backgroundColor: 'white',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 4,
+    zIndex: 10,
   },
   iconButton: {
     padding: 5,
@@ -970,12 +983,11 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 10,
-    height: 40,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    marginHorizontal: 8,
+    backgroundColor: '#F1F3F6',
+    borderRadius: 12,
+    height: 44,
+    marginRight: 12,
+    paddingHorizontal: 4,
   },
   searchIcon: {
     marginLeft: 8,
@@ -1001,14 +1013,14 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: 'white',
-    borderRadius: 12, // Slightly more rounded corners
+    borderRadius: 16,
     marginVertical: 8,
     marginHorizontal: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   imageContainer: {
     width: 60,
@@ -1018,8 +1030,9 @@ const styles = StyleSheet.create({
   productImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: '#f8f9fa',
+    resizeMode: 'contain',
   },
   collapsedContainer: {
     flexDirection: 'row',
@@ -1032,60 +1045,64 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   name: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#212529', // Standard dark text for better readability
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#2D3748',
+    marginBottom: 4,
   },
   sku: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    color: '#A0AEC0',
   },
   priceContainer: {
     alignItems: 'flex-end',
   },
   price: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2a9d8f', // Use accent color for price
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#2a9d8f',
   },
   stock: {
-    fontSize: 12,
-    color: '#888',
+    fontSize: 11,
+    color: '#718096',
     marginTop: 4,
+    fontWeight: '500',
   },
   expandedContainer: {
     paddingHorizontal: 16,
     paddingBottom: 16,
     borderTopWidth: 1,
-    borderTopColor: '#f1f3f5',
-    marginTop: 10,
+    borderTopColor: '#F7FAFC',
+    backgroundColor: '#FAFAFA',
   },
   detailsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: 16,
+    marginTop: 16,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f3f5',
+    borderBottomColor: '#E2E8F0',
   },
   detailItem: {
     alignItems: 'center',
   },
   detailLabel: {
-    fontSize: 12,
-    color: '#6c757d',
+    fontSize: 11,
+    color: '#A0AEC0',
+    textTransform: 'uppercase',
+    fontWeight: '600',
     marginBottom: 2,
   },
   detailValue: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#212529',
+    fontWeight: '600',
+    color: '#2D3748',
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1d3557',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4A5568',
     marginTop: 10,
     marginBottom: 8,
   },
@@ -1093,35 +1110,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2F7',
   },
   tierInfo: {
     flex: 1,
   },
   tierPack: {
     fontSize: 14,
-    color: '#212529',
-    fontWeight: '500',
+    color: '#2D3748',
+    fontWeight: '600',
   },
   porText: {
     fontSize: 12,
-    color: '#2a9d8f', // Use the app's accent color
-    fontWeight: 'bold',
+    color: '#38B2AC',
+    fontWeight: '600',
   },
   normalPrice: {
     fontSize: 14,
-    color: '#333',
+    color: '#4A5568',
+    marginTop: 2,
   },
   promoPrice: {
     fontSize: 14,
     color: '#e63946',
     fontWeight: 'bold',
+    marginTop: 2,
   },
   originalPrice: {
     fontSize: 12,
-    color: '#888',
+    color: '#A0AEC0',
     textDecorationLine: 'line-through',
     marginLeft: 8,
+    marginTop: 2,
   },
   quantityContainer: {
     flexDirection: 'row',
@@ -1129,28 +1151,33 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   quantityButton: {
-    backgroundColor: '#2a9d8f',
-    width: 36,
-    height: 36,
-    borderRadius: 18, // Circular buttons
+    backgroundColor: 'white',
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   quantityButtonText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
+    color: '#1d3557',
+    fontSize: 18,
+    fontWeight: '600',
   },
   quantityInput: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#212529',
+    color: '#2D3748',
     marginHorizontal: 8,
-    minWidth: 20,
+    minWidth: 30,
     textAlign: 'center',
     paddingVertical: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ced4da',
   },
   footer: {
     position: 'absolute',
@@ -1158,16 +1185,25 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#1d3557',
-    padding: 16,
-    paddingBottom: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 10,
   },
   footerText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '600',
+    opacity: 0.9,
   },
   footerTotal: {
     color: 'white',
@@ -1177,19 +1213,23 @@ const styles = StyleSheet.create({
   viewCartContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -8,
+    top: 0,
+    right: 0,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
-    elevation: 5,
+    borderBottomLeftRadius: 8,
+    elevation: 2,
   },
   badgeText: {
     color: 'white',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: 'bold',
   },
   clearanceBadge: {

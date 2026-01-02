@@ -45,6 +45,7 @@ export default function LoginScreen({ navigation }) {
       // Store the token securely
       await AsyncStorage.setItem('userToken', data.token);
       await AsyncStorage.setItem('userData', JSON.stringify(data.user));
+      await AsyncStorage.setItem('userId', String(data.user.id));
 
       navigation.reset({
         index: 0,
