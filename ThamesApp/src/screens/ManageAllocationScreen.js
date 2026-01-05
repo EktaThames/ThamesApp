@@ -14,6 +14,10 @@ export default function ManageAllocationScreen({ navigation }) {
   
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [customerDetailVisible, setCustomerDetailVisible] = useState(false);
+  const [customerOrders, setCustomerOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -89,7 +93,6 @@ export default function ManageAllocationScreen({ navigation }) {
       });
 
       if (response.ok) {
-        Alert.alert('Success', 'Sales representative assigned successfully.');
         const repName = salesReps.find(r => r.id === repId)?.name;
         
         setCustomers(prev => prev.map(c => 
@@ -98,6 +101,7 @@ export default function ManageAllocationScreen({ navigation }) {
         
         setAssignModalVisible(false);
         setSelectedCustomer(null);
+        setShowSuccessModal(true);
       } else {
         Alert.alert('Error', 'Failed to assign representative.');
       }
@@ -106,8 +110,40 @@ export default function ManageAllocationScreen({ navigation }) {
     }
   };
 
+  const fetchCustomerOrders = async (customerId) => {
+    setOrdersLoading(true);
+    setCustomerOrders([]);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch(`${API_URL}/api/orders?user_id=${customerId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setCustomerOrders(data);
+      }
+    } catch (e) {
+      console.error("Error fetching customer orders:", e);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const handleStartOrderForCustomer = async (customer) => {
+    await AsyncStorage.setItem('actingAsClient', JSON.stringify(customer));
+    setCustomerDetailVisible(false);
+    navigation.navigate('ProductList');
+  };
+
   const renderCustomerItem = ({ item }) => (
-    <View style={styles.card}>
+    <TouchableOpacity 
+      style={styles.card}
+      onPress={() => {
+        setSelectedCustomer(item);
+        setCustomerDetailVisible(true);
+        fetchCustomerOrders(item.id);
+      }}
+    >
       <View style={styles.cardHeader}>
         <View style={styles.avatarContainer}>
           <Text style={styles.avatarText}>{item.name?.charAt(0) || item.username?.charAt(0) || 'C'}</Text>
@@ -132,7 +168,7 @@ export default function ManageAllocationScreen({ navigation }) {
           <Text style={styles.assignButtonText}>Assign</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -198,6 +234,87 @@ export default function ManageAllocationScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showSuccessModal}
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModalContent}>
+            <View style={styles.successIconContainer}>
+              <Icon name="checkmark-outline" size={50} color="white" />
+            </View>
+            <Text style={styles.successTitle}>Assignment Complete!</Text>
+            <Text style={styles.successMessage}>Sales representative has been successfully assigned.</Text>
+            <TouchableOpacity style={styles.successButton} onPress={() => setShowSuccessModal(false)}>
+              <Text style={styles.successButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Customer Detail Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={customerDetailVisible}
+        onRequestClose={() => setCustomerDetailVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+            <Text style={styles.modalTitle}>Customer Details</Text>
+            <View style={{ width: '100%', marginBottom: 20 }}>
+              <Text style={styles.detailLabel}>Name</Text>
+              <Text style={styles.detailValue}>{selectedCustomer?.name || selectedCustomer?.username}</Text>
+              <Text style={styles.detailLabel}>Email</Text>
+              <Text style={styles.detailValue}>{selectedCustomer?.email}</Text>
+              <Text style={styles.detailLabel}>Address</Text>
+              <Text style={styles.detailValue}>{selectedCustomer?.address || 'N/A'}</Text>
+            </View>
+
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1d3557', alignSelf: 'flex-start', marginBottom: 10 }}>Order History</Text>
+            {ordersLoading ? (
+              <ActivityIndicator color="#1d3557" style={{ marginBottom: 20 }} />
+            ) : (
+              <FlatList
+                data={customerOrders}
+                keyExtractor={item => item.id.toString()}
+                style={{ width: '100%', marginBottom: 20 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity 
+                    style={styles.orderHistoryItem}
+                    onPress={() => { 
+                      setCustomerDetailVisible(false);
+                      navigation.navigate('OrderDetail', { orderId: item.id });
+                    }}
+                  >
+                    <View>
+                      <Text style={styles.orderHistoryId}>Order #{item.id}</Text>
+                      <Text style={styles.orderHistoryDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={styles.orderHistoryAmount}>£{parseFloat(item.total_amount).toFixed(2)}</Text>
+                      <Text style={styles.orderHistoryStatus}>{item.status}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={<Text style={{ color: '#6c757d', fontStyle: 'italic' }}>No orders found for this customer.</Text>}
+              />
+            )}
+            
+            <TouchableOpacity style={[styles.primaryButton, { width: '100%', marginBottom: 10 }]} onPress={() => handleStartOrderForCustomer(selectedCustomer)}>
+              <Text style={styles.primaryButtonText}>Place Order for Customer</Text>
+            </TouchableOpacity>
+        
+            <TouchableOpacity style={styles.closeButton} onPress={() => setCustomerDetailVisible(false)}>
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -236,4 +353,92 @@ const styles = StyleSheet.create({
   repName: { fontSize: 16, color: '#212529' },
   closeButton: { marginTop: 20, padding: 10 },
   closeButtonText: { color: '#e63946', fontSize: 16, fontWeight: 'bold' },
+  
+  // Success Modal Styles
+  successModalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  successIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#2a9d8f',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#2a9d8f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  successTitle: { fontSize: 22, fontWeight: '800', color: '#1d3557', marginBottom: 12, textAlign: 'center' },
+  successMessage: { fontSize: 15, color: '#6c757d', textAlign: 'center', marginBottom: 32, lineHeight: 22 },
+  successButton: {
+    backgroundColor: '#1d3557',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#1d3557',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  successButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  
+  // Customer Detail Styles
+  detailLabel: {
+    fontSize: 14,
+    color: '#6c757d',
+    marginTop: 10,
+  },
+  detailValue: {
+    fontSize: 16,
+    color: '#1d3557',
+    marginBottom: 5,
+    fontWeight: '500',
+  },
+  orderHistoryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f3f5',
+    width: '100%',
+  },
+  orderHistoryId: { fontWeight: 'bold', color: '#1d3557' },
+  orderHistoryDate: { fontSize: 12, color: '#6c757d' },
+  orderHistoryAmount: { fontWeight: 'bold', color: '#2a9d8f' },
+  orderHistoryStatus: { fontSize: 12, color: '#6c757d', textTransform: 'capitalize' },
+  primaryButton: {
+    backgroundColor: '#1d3557',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#1d3557',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
 });

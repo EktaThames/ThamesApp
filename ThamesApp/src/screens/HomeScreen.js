@@ -28,6 +28,7 @@ export default function HomeScreen({ navigation, route }) {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [roleLoading, setRoleLoading] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleSearchSubmit = () => {
     navigation.navigate('ProductList', { initialSearch: searchText });
@@ -152,11 +153,11 @@ export default function HomeScreen({ navigation, route }) {
       });
 
       if (response.ok) {
-        Alert.alert('Success', 'Sales representative assigned successfully.');
         // Update local state to reflect change
         setAdminCustomers(prev => prev.map(c => c.id === selectedCustomer.id ? { ...c, sales_rep_id: repId, sales_rep_name: salesReps.find(r => r.id === repId)?.name } : c));
         setAssignModalVisible(false);
         setSelectedCustomer(null);
+        setShowSuccessModal(true);
       } else {
         Alert.alert('Error', 'Failed to assign representative.');
       }
@@ -541,6 +542,27 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showSuccessModal}
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModalContent}>
+            <View style={styles.successIconContainer}>
+              <Icon name="checkmark-outline" size={50} color="white" />
+            </View>
+            <Text style={styles.successTitle}>Assignment Complete!</Text>
+            <Text style={styles.successMessage}>Sales representative has been successfully assigned.</Text>
+            <TouchableOpacity style={styles.successButton} onPress={() => setShowSuccessModal(false)}>
+              <Text style={styles.successButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -914,4 +936,48 @@ const styles = StyleSheet.create({
   orderDetailImage: { width: 50, height: 50, borderRadius: 8, marginRight: 12, backgroundColor: '#f8f9fa' },
   orderDetailName: { fontSize: 14, fontWeight: 'bold', color: '#212529' },
   orderDetailMeta: { fontSize: 12, color: '#6c757d', marginTop: 2 },
+  
+  // Success Modal Styles
+  successModalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  successIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#2a9d8f',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#2a9d8f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  successTitle: { fontSize: 22, fontWeight: '800', color: '#1d3557', marginBottom: 12, textAlign: 'center' },
+  successMessage: { fontSize: 15, color: '#6c757d', textAlign: 'center', marginBottom: 32, lineHeight: 22 },
+  successButton: {
+    backgroundColor: '#1d3557',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#1d3557',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  successButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });
