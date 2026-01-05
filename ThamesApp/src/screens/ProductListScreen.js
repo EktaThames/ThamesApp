@@ -301,7 +301,7 @@ const FilterUI = React.memo(forwardRef(({ activeFilters, categories, subcategori
   return (
     <>
       <TouchableOpacity style={styles.filterButton} onPress={openModal}>
-        <Icon name="options-outline" size={24} color="#495057" />
+        <Icon name="options-outline" size={20} color="#495057" />
       </TouchableOpacity>
       <FilterModal
         visible={visible}
@@ -888,16 +888,16 @@ export default function ProductListScreen({ navigation, route }) {
         )}
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={styles.searchContainer}>
-            <Icon name="search-outline" size={20} color="#6c757d" style={styles.searchIcon} />
+            <Icon name="search-outline" size={18} color="#6c757d" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search..."
+              placeholder="Search products..."
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor="#6c757d"
             />
             <TouchableOpacity style={styles.barcodeButton} onPress={() => setScannerVisible(true)}>
-              <Icon name="camera-outline" size={22} color="#495057" />
+              <Icon name="scan-outline" size={20} color="#495057" />
             </TouchableOpacity>
             <FilterUI 
               ref={filterRef}
@@ -1000,13 +1000,14 @@ const styles = StyleSheet.create({
     color: '#1d3557',
   },
   barcodeButton: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 5,
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
   filterButton: {
-    paddingHorizontal: 8,
+    paddingLeft: 5,
+    paddingRight: 8,
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',

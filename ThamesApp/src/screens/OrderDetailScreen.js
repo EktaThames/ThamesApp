@@ -121,7 +121,10 @@ export default function OrderDetailScreen({ route, navigation }) {
         ListHeaderComponent={
           <View style={styles.summaryCard}>
             <View style={styles.summaryHeader}>
-              <Text style={styles.summaryDate}>{new Date(order.created_at).toLocaleString()}</Text>
+              <View>
+                <Text style={styles.summaryLabel}>Order Date</Text>
+                <Text style={styles.summaryDate}>{new Date(order.created_at).toLocaleString()}</Text>
+              </View>
               <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
                 <Text style={[styles.statusText, { color: statusColor }]}>{order.status}</Text>
               </View>
@@ -171,50 +174,84 @@ export default function OrderDetailScreen({ route, navigation }) {
             </View>
           </View>
         }
-        ListHeaderComponentStyle={{ marginBottom: 10 }}
+        ListHeaderComponentStyle={{ marginBottom: 20 }}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f4f5f7' },
+  container: { flex: 1, backgroundColor: '#F8F9FC' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#e9ecef', elevation: 2 },
-  backButton: { marginRight: 16 },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#1d3557' },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 4,
+    zIndex: 10,
+  },
+  backButton: { marginRight: 16, padding: 4 },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1d3557' },
   
-  summaryCard: { backgroundColor: 'white', borderRadius: 16, padding: 20, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
-  summaryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  summaryDate: { color: '#6c757d', fontSize: 14 },
-  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  statusText: { fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' },
+  summaryCard: { 
+    backgroundColor: 'white', 
+    borderRadius: 20, 
+    padding: 24, 
+    marginBottom: 10, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 12, 
+    elevation: 3 
+  },
+  summaryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
+  summaryDate: { color: '#2D3748', fontSize: 15, fontWeight: '600', marginTop: 2 },
+  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  statusText: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
   
-  divider: { height: 1, backgroundColor: '#f1f3f5', marginBottom: 15 },
+  divider: { height: 1, backgroundColor: '#EDF2F7', marginBottom: 20 },
   
-  summaryRow: { marginBottom: 15 },
-  summaryLabel: { fontSize: 12, color: '#6c757d', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  summaryValue: { fontSize: 16, fontWeight: 'bold', color: '#1d3557' },
-  summarySubValue: { fontSize: 14, color: '#2a9d8f', fontStyle: 'italic' },
+  summaryRow: { marginBottom: 20 },
+  summaryLabel: { fontSize: 12, color: '#A0AEC0', textTransform: 'uppercase', fontWeight: '700', letterSpacing: 0.5, marginBottom: 6 },
+  summaryValue: { fontSize: 16, fontWeight: '700', color: '#2D3748' },
+  summarySubValue: { fontSize: 14, color: '#2a9d8f', fontStyle: 'italic', marginTop: 2 },
   
-  detailSection: { marginBottom: 15 },
-  detailLabel: { fontSize: 12, color: '#6c757d', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: 4 },
-  detailText: { fontSize: 14, color: '#212529', marginBottom: 2 },
+  detailSection: { marginBottom: 20 },
+  detailLabel: { fontSize: 12, color: '#A0AEC0', textTransform: 'uppercase', fontWeight: '700', marginBottom: 8 },
+  detailText: { fontSize: 15, color: '#4A5568', marginBottom: 4, lineHeight: 22 },
 
-  totalContainer: { marginTop: 5, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#f1f3f5' },
-  subTotalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  subTotalLabel: { fontSize: 14, color: '#6c757d' },
-  subTotalValue: { fontSize: 14, color: '#212529', fontWeight: '600' },
-  grossRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f8f9fa' },
-  totalLabel: { fontSize: 18, fontWeight: 'bold', color: '#1d3557' },
-  totalAmount: { fontSize: 24, fontWeight: 'bold', color: '#2a9d8f' },
+  totalContainer: { marginTop: 10, paddingTop: 20, borderTopWidth: 1, borderTopColor: '#EDF2F7' },
+  subTotalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  subTotalLabel: { fontSize: 15, color: '#718096' },
+  subTotalValue: { fontSize: 15, color: '#2D3748', fontWeight: '600' },
+  grossRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F7FAFC' },
+  totalLabel: { fontSize: 18, fontWeight: '800', color: '#1d3557' },
+  totalAmount: { fontSize: 24, fontWeight: '800', color: '#2a9d8f' },
   
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1d3557', marginBottom: 12, marginLeft: 4 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#2D3748', marginBottom: 16, marginLeft: 4 },
   
-  itemCard: { flexDirection: 'row', backgroundColor: 'white', padding: 12, borderRadius: 12, marginBottom: 12, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 3, elevation: 1 },
-  productImage: { width: 60, height: 60, borderRadius: 8, marginRight: 12, backgroundColor: '#f8f9fa' },
+  itemCard: { 
+    flexDirection: 'row', 
+    backgroundColor: 'white', 
+    padding: 16, 
+    borderRadius: 16, 
+    marginBottom: 12, 
+    alignItems: 'center', 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 8, 
+    elevation: 2 
+  },
+  productImage: { width: 60, height: 60, borderRadius: 12, marginRight: 16, backgroundColor: '#F7FAFC', resizeMode: 'contain' },
   itemInfo: { flex: 1 },
-  itemName: { fontSize: 15, fontWeight: '600', color: '#212529', marginBottom: 4 },
-  itemMeta: { fontSize: 14, color: '#6c757d', marginTop: 2 },
-  itemPrice: { fontSize: 16, fontWeight: 'bold', color: '#1d3557', marginTop: 4 },
+  itemName: { fontSize: 15, fontWeight: '700', color: '#2D3748', marginBottom: 4 },
+  itemMeta: { fontSize: 13, color: '#718096', marginTop: 2 },
+  itemPrice: { fontSize: 16, fontWeight: '700', color: '#2a9d8f', marginTop: 6 },
 });

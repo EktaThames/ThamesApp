@@ -14,6 +14,7 @@ export default function MyProfileScreen({ navigation }) {
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -145,7 +146,7 @@ export default function MyProfileScreen({ navigation }) {
           return merged;
         });
         setEditModalVisible(false);
-        Alert.alert('Success', 'Profile updated successfully');
+        setShowSuccessModal(true);
       } else {
         Alert.alert('Error', data.message || 'Failed to update profile');
       }
@@ -188,7 +189,7 @@ export default function MyProfileScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* User Details Card */}
         <View style={styles.card}>
           <View style={styles.profileHeader}>
@@ -199,7 +200,9 @@ export default function MyProfileScreen({ navigation }) {
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.userName}>{user.name || user.username}</Text>
-              <Text style={styles.userRole}>{user.role?.replace('_', ' ')}</Text>
+              <View style={styles.roleBadge}>
+                <Text style={styles.userRole}>{user.role?.replace('_', ' ')}</Text>
+              </View>
             </View>
           </View>
           
@@ -230,7 +233,9 @@ export default function MyProfileScreen({ navigation }) {
             <Icon name="call-outline" size={20} color="#6c757d" />
             <View style={styles.detailContent}>
               <Text style={styles.detailText}>{user.phone || user.mobile || user.contact_number || user.telephone || user.phone_number || 'Phone not set'}</Text>
-              <TouchableOpacity onPress={() => openEditModal('phone', user.phone || user.mobile || user.contact_number || user.telephone || user.phone_number)}>
+              <TouchableOpacity 
+                style={styles.editButton}
+                onPress={() => openEditModal('phone', user.phone || user.mobile || user.contact_number || user.telephone || user.phone_number)}>
                 <Icon name="create-outline" size={20} color="#2a9d8f" style={styles.editIcon} />
               </TouchableOpacity>
             </View>
@@ -240,7 +245,9 @@ export default function MyProfileScreen({ navigation }) {
             <Icon name="location-outline" size={20} color="#6c757d" />
             <View style={styles.detailContent}>
               <Text style={styles.detailText}>{user.address || user.billing_address || user.address_line_1 || user.street || 'Address not set'}</Text>
-              <TouchableOpacity onPress={() => openEditModal('address', user.address || user.billing_address || user.address_line_1 || user.street)}>
+              <TouchableOpacity 
+                style={styles.editButton}
+                onPress={() => openEditModal('address', user.address || user.billing_address || user.address_line_1 || user.street)}>
                 <Icon name="create-outline" size={20} color="#2a9d8f" style={styles.editIcon} />
               </TouchableOpacity>
             </View>
@@ -284,7 +291,7 @@ export default function MyProfileScreen({ navigation }) {
         visible={editModalVisible}
         onRequestClose={() => setEditModalVisible(false)}
       >
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay} enabled>
           <View style={styles.editModalContent}>
             <Text style={styles.modalTitle}>Edit {editingField === 'phone' ? 'Phone Number' : 'Address'}</Text>
             <TextInput
@@ -306,45 +313,186 @@ export default function MyProfileScreen({ navigation }) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showSuccessModal}
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModalContent}>
+            <View style={styles.successIconContainer}>
+              <Icon name="checkmark-outline" size={50} color="white" />
+            </View>
+            <Text style={styles.successTitle}>Profile Updated!</Text>
+            <Text style={styles.successMessage}>Your profile details have been successfully updated.</Text>
+            <TouchableOpacity style={styles.successButton} onPress={() => setShowSuccessModal(false)}>
+              <Text style={styles.successButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { flex: 1, backgroundColor: '#F8F9FC' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#e9ecef' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1d3557' },
-  scrollContent: { padding: 16 },
-  card: { backgroundColor: 'white', borderRadius: 12, padding: 20, marginBottom: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 4,
+    zIndex: 10,
+  },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1d3557' },
+  scrollContent: { padding: 20 },
+  card: { 
+    backgroundColor: 'white', 
+    borderRadius: 20, 
+    padding: 24, 
+    marginBottom: 24, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 12, 
+    elevation: 3 
+  },
   profileHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  avatarContainer: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#1d3557', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
-  avatarText: { color: 'white', fontSize: 24, fontWeight: 'bold' },
+  avatarContainer: { 
+    width: 70, 
+    height: 70, 
+    borderRadius: 35, 
+    backgroundColor: '#1d3557', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginRight: 16,
+    shadowColor: '#1d3557',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  avatarText: { color: 'white', fontSize: 28, fontWeight: 'bold' },
   profileInfo: { flex: 1 },
-  userName: { fontSize: 20, fontWeight: 'bold', color: '#212529' },
-  userRole: { fontSize: 14, color: '#6c757d', textTransform: 'capitalize' },
-  divider: { height: 1, backgroundColor: '#e9ecef', marginBottom: 16 },
-  detailRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  userName: { fontSize: 22, fontWeight: 'bold', color: '#2D3748', marginBottom: 4 },
+  roleBadge: {
+    backgroundColor: '#E6FFFA',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  userRole: { fontSize: 12, color: '#2a9d8f', fontWeight: '700', textTransform: 'uppercase' },
+  divider: { height: 1, backgroundColor: '#EDF2F7', marginBottom: 20 },
+  detailRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
   detailContent: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginLeft: 12 },
-  detailText: { fontSize: 16, color: '#495057', flex: 1 },
-  editIcon: { padding: 4 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1d3557', marginBottom: 12 },
+  detailText: { fontSize: 15, color: '#4A5568', flex: 1, lineHeight: 22 },
+  editButton: {
+    padding: 8,
+    backgroundColor: '#F7FAFC',
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  editIcon: { },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#2D3748', marginBottom: 12, marginLeft: 4 },
   noOrdersText: { textAlign: 'center', color: '#6c757d', marginTop: 20, fontStyle: 'italic' },
   // Edit Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  editModalContent: { width: '85%', backgroundColor: 'white', borderRadius: 20, padding: 20, elevation: 5 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1d3557', marginBottom: 15 },
-  editInput: { borderWidth: 1, borderColor: '#ced4da', borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 20, color: '#212529' },
-  modalButtons: { flexDirection: 'row', justifyContent: 'flex-end' },
-  modalButton: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, marginLeft: 10 },
-  cancelButton: { backgroundColor: '#e9ecef' },
-  saveButton: { backgroundColor: '#2a9d8f' },
-  cancelButtonText: { color: '#495057', fontWeight: 'bold' },
+  editModalContent: { width: '85%', backgroundColor: 'white', borderRadius: 24, padding: 24, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1d3557', marginBottom: 20 },
+  editInput: { borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 16, fontSize: 16, marginBottom: 24, color: '#2D3748', backgroundColor: '#F7FAFC' },
+  modalButtons: { flexDirection: 'row', justifyContent: 'space-between' },
+  modalButton: { paddingVertical: 14, borderRadius: 12, width: '48%', alignItems: 'center' },
+  cancelButton: { backgroundColor: '#F1F5F9' },
+  saveButton: { backgroundColor: '#1d3557' },
+  cancelButtonText: { color: '#64748B', fontWeight: '600', fontSize: 16 },
   saveButtonText: { color: 'white', fontWeight: 'bold' },
   // Order History Card
-  orderHistoryCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'white', borderRadius: 12, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+  orderHistoryCard: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    backgroundColor: 'white', 
+    borderRadius: 20, 
+    padding: 20, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 8, 
+    elevation: 2 
+  },
   orderHistoryContent: { flexDirection: 'row', alignItems: 'center' },
   orderHistoryTextContainer: { marginLeft: 16 },
-  orderHistoryTitle: { fontSize: 16, fontWeight: 'bold', color: '#1d3557' },
-  orderHistorySubtitle: { fontSize: 14, color: '#6c757d', marginTop: 2 },
+  orderHistoryTitle: { fontSize: 16, fontWeight: '700', color: '#2D3748' },
+  orderHistorySubtitle: { fontSize: 14, color: '#718096', marginTop: 2 },
+  
+  // Success Modal Styles
+  successModalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  successIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#2a9d8f',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#2a9d8f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  successTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1d3557',
+    marginBottom: 12,
+  },
+  successMessage: {
+    fontSize: 15,
+    color: '#6c757d',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  successButton: {
+    backgroundColor: '#1d3557',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#1d3557',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  successButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
