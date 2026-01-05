@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, SafeAreaView, StatusBar } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config/api';
@@ -63,22 +63,51 @@ export default function LoginScreen({ navigation }) {
   // Renders the initial role selection screen
   if (!userType) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.welcomeTitle}>Welcome to ThamesCC</Text>
-        <Text style={styles.subtitle}>Please select your role to login</Text>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#F8F9FC" />
+        <View style={styles.headerContainer}>
+          <View style={styles.logoPlaceholder}>
+            <Icon name="cube" size={40} color="white" />
+          </View>
+          <Text style={styles.welcomeTitle}>Thames Cash & Carry</Text>
+          <Text style={styles.subtitle}>Choose your portal to continue</Text>
+        </View>
+        
+        <View style={styles.roleContainer}>
         <TouchableOpacity style={styles.roleButton} onPress={() => setUserType('customer')}>
-          <Icon name="person-outline" size={24} color="white" />
-          <Text style={styles.roleButtonText}>Trade Customer</Text>
+          <View style={[styles.iconCircle, { backgroundColor: '#E6FFFA' }]}>
+            <Icon name="person" size={24} color="#2a9d8f" />
+          </View>
+          <View style={styles.roleTextContainer}>
+            <Text style={styles.roleButtonTitle}>Trade Customer</Text>
+            <Text style={styles.roleButtonSubtitle}>Access your account & orders</Text>
+          </View>
+          <Icon name="chevron-forward" size={20} color="#CBD5E0" />
         </TouchableOpacity>
+        
         <TouchableOpacity style={styles.roleButton} onPress={() => setUserType('sales_rep')}>
-          <Icon name="briefcase-outline" size={24} color="white" />
-          <Text style={styles.roleButtonText}>Sales Representative</Text>
+          <View style={[styles.iconCircle, { backgroundColor: '#EBF8FF' }]}>
+            <Icon name="briefcase" size={24} color="#3182CE" />
+          </View>
+          <View style={styles.roleTextContainer}>
+            <Text style={styles.roleButtonTitle}>Sales Representative</Text>
+            <Text style={styles.roleButtonSubtitle}>Manage clients & sales</Text>
+          </View>
+          <Icon name="chevron-forward" size={20} color="#CBD5E0" />
         </TouchableOpacity>
+        
         <TouchableOpacity style={styles.roleButton} onPress={() => setUserType('admin')}>
-          <Icon name="shield-checkmark-outline" size={24} color="white" />
-          <Text style={styles.roleButtonText}>Admin</Text>
+          <View style={[styles.iconCircle, { backgroundColor: '#FAF5FF' }]}>
+            <Icon name="shield-checkmark" size={24} color="#805AD5" />
+          </View>
+          <View style={styles.roleTextContainer}>
+            <Text style={styles.roleButtonTitle}>Administrator</Text>
+            <Text style={styles.roleButtonSubtitle}>System management</Text>
+          </View>
+          <Icon name="chevron-forward" size={20} color="#CBD5E0" />
         </TouchableOpacity>
-      </View>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -88,12 +117,18 @@ export default function LoginScreen({ navigation }) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      <TouchableOpacity style={styles.backButton} onPress={() => setUserType(null)}>
-        <Icon name="arrow-back-outline" size={24} color="#1d3557" />
-      </TouchableOpacity>
-      <Text style={styles.title}>{`${
-        userType === 'sales_rep' ? 'Sales Rep' : userType.charAt(0).toUpperCase() + userType.slice(1)
-      } Login`}</Text>
+      <StatusBar barStyle="dark-content" backgroundColor="#F8F9FC" />
+      <View style={styles.loginHeader}>
+        <TouchableOpacity style={styles.backButton} onPress={() => setUserType(null)}>
+          <Icon name="arrow-back" size={24} color="#1d3557" />
+        </TouchableOpacity>
+        <Text style={styles.loginTitle}>Welcome Back!</Text>
+        <Text style={styles.loginSubtitle}>
+          Login as {userType === 'sales_rep' ? 'Sales Representative' : userType.charAt(0).toUpperCase() + userType.slice(1)}
+        </Text>
+      </View>
+
+      <View style={styles.formContainer}>
       <View style={styles.inputContainer}>
         <Icon
           name={userType === 'admin' ? 'mail-outline' : 'person-circle-outline'}
@@ -136,22 +171,122 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.loginButtonText}>Login</Text>
         )}
       </TouchableOpacity>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f4f5f7', padding: 20 },
-  welcomeTitle: { fontSize: 32, fontWeight: 'bold', color: '#1d3557', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#495057', marginBottom: 40, textAlign: 'center' },
-  roleButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1d3557', paddingVertical: 15, paddingHorizontal: 30, borderRadius: 12, marginBottom: 15, width: '90%' },
-  roleButtonText: { color: 'white', fontSize: 18, fontWeight: '600', marginLeft: 15 },
-  backButton: { position: 'absolute', top: 60, left: 20 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#1d3557', marginBottom: 30 },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 12, borderWidth: 1, borderColor: '#e9ecef', width: '100%', height: 55, marginBottom: 15, paddingHorizontal: 15 },
-  inputIcon: { marginRight: 10 },
-  input: { flex: 1, height: '100%', fontSize: 16, color: '#212529' },
-  loginButton: { backgroundColor: '#2a9d8f', padding: 16, borderRadius: 12, alignItems: 'center', width: '100%', marginTop: 10 },
-  loginButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-  errorText: { color: '#e63946', marginBottom: 10, textAlign: 'center' },
+  container: { flex: 1, backgroundColor: '#F8F9FC' },
+  headerContainer: {
+    alignItems: 'center',
+    marginTop: 60,
+    marginBottom: 40,
+    paddingHorizontal: 20,
+  },
+  logoPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: '#1d3557',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#1d3557',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  welcomeTitle: { fontSize: 28, fontWeight: '800', color: '#1d3557', marginBottom: 8, textAlign: 'center' },
+  subtitle: { fontSize: 16, color: '#718096', textAlign: 'center' },
+  
+  roleContainer: {
+    paddingHorizontal: 24,
+  },
+  roleButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: 'white', 
+    padding: 20, 
+    borderRadius: 20, 
+    marginBottom: 16, 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  roleTextContainer: { flex: 1 },
+  roleButtonTitle: { color: '#2D3748', fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  roleButtonSubtitle: { color: '#A0AEC0', fontSize: 13 },
+  
+  // Login Form Styles
+  loginHeader: {
+    paddingHorizontal: 24,
+    marginTop: 40,
+    marginBottom: 30,
+  },
+  backButton: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 12, 
+    backgroundColor: 'white', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  loginTitle: { fontSize: 28, fontWeight: '800', color: '#1d3557', marginBottom: 8 },
+  loginSubtitle: { fontSize: 16, color: '#718096' },
+  
+  formContainer: {
+    paddingHorizontal: 24,
+  },
+  inputContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: 'white', 
+    borderRadius: 16, 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0', 
+    width: '100%', 
+    height: 60, 
+    marginBottom: 16, 
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, height: '100%', fontSize: 16, color: '#2D3748' },
+  loginButton: { 
+    backgroundColor: '#1d3557', 
+    paddingVertical: 18, 
+    borderRadius: 16, 
+    alignItems: 'center', 
+    width: '100%', 
+    marginTop: 24,
+    shadowColor: '#1d3557',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  loginButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  errorText: { color: '#e63946', marginBottom: 16, textAlign: 'center', backgroundColor: '#FFF5F5', padding: 10, borderRadius: 8, overflow: 'hidden' },
 });

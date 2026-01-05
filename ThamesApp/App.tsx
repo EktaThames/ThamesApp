@@ -10,6 +10,9 @@ import CartScreen from './src/screens/CartScreen';
 import OrderListScreen from './src/screens/OrderListScreen';
 import OrderDetailScreen from './src/screens/OrderDetailScreen';
 import MyProfileScreen from './src/screens/MyProfileScreen';
+import ManageAllocationScreen from './src/screens/ManageAllocationScreen';
+import MyCustomersScreen from './src/screens/MyCustomersScreen';
+
 
 // Define types for better code quality (Optional but recommended standard)
 export type RootStackParamList = {
@@ -56,6 +59,16 @@ export default function App() {
         <Stack.Screen name="OrderList" component={OrderListScreen} options={{ headerShown: false }} />
         <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
         <Stack.Screen name="MyProfile" component={MyProfileScreen} options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="ManageAllocation" 
+          component={ManageAllocationScreen} 
+          options={{ title: 'Manage Allocation' }}
+        />
+        <Stack.Screen 
+          name="MyCustomers" 
+          component={MyCustomersScreen} 
+          options={{ title: 'My Customers' }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -250,7 +250,12 @@ export default function HomeScreen({ navigation, route }) {
         {/* Admin Section: Manage Customers */}
         {user?.role === 'admin' && (
           <View style={styles.section}>
-            <Text style={styles.mainSectionTitle}>Manage Customer Allocation</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.trendingSectionTitle}>Manage Allocation</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('ManageAllocation')}>
+                <Text style={styles.viewAllButton}>View All</Text>
+              </TouchableOpacity>
+            </View>
             {roleLoading ? <ActivityIndicator color="#1d3557" /> : (
               <FlatList
                 data={adminCustomers}
@@ -291,7 +296,12 @@ export default function HomeScreen({ navigation, route }) {
         {/* Sales Rep Section: My Customers */}
         {user?.role === 'sales_rep' && (
           <View style={styles.section}>
-            <Text style={styles.mainSectionTitle}>My Assigned Customers</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.trendingSectionTitle}>My Assigned Customers</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('MyCustomers')}>
+                <Text style={styles.viewAllButton}>View All</Text>
+              </TouchableOpacity>
+            </View>
             {roleLoading ? <ActivityIndicator color="#1d3557" /> : (
               <FlatList
                 data={myCustomers}

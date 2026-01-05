@@ -252,16 +252,18 @@ export default function CartScreen({ route, navigation }) {
           activeFilters: { categories: [], subcategories: [], brands: [], pmp: false, promotion: false }
         })}
       >
-        <Image source={{ uri: `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${item.product.item}.webp` }} style={styles.productImage} />
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: `https://thames-product-images.s3.us-east-1.amazonaws.com/produc_images/bagistoimagesprivatewebp/${item.product.item}.webp` }} style={styles.productImage} />
+        </View>
         <View style={styles.infoContainer}>
-          <Text style={styles.name}>{item.product.description}</Text>
+          <Text style={styles.name} numberOfLines={2}>{item.product.description}</Text>
           <Text style={styles.tierPack}>{item.tier.pack_size || `Pack ${item.tier.tier}`}</Text>
           <Text style={styles.price}>{formatPrice(item.tier.promo_price || item.tier.sell_price)}</Text>
         </View>
       </TouchableOpacity>
       <View style={styles.quantityContainer}>
         <TouchableOpacity style={styles.quantityButton} onPress={() => updateQuantity(item.key, -1)}>
-          <Text style={styles.quantityButtonText}>-</Text>
+          <Icon name="remove" size={18} color="#1d3557" />
         </TouchableOpacity>
         <TextInput
           style={styles.quantityInput}
@@ -270,7 +272,7 @@ export default function CartScreen({ route, navigation }) {
           onChangeText={(text) => setQuantity(item.key, text)}
         />
         <TouchableOpacity style={styles.quantityButton} onPress={() => updateQuantity(item.key, 1)}>
-          <Text style={styles.quantityButtonText}>+</Text>
+          <Icon name="add" size={18} color="#1d3557" />
         </TouchableOpacity>
       </View>
     </View>
@@ -285,12 +287,13 @@ export default function CartScreen({ route, navigation }) {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Delivery Address</Text>
           <View style={styles.inputWrapper}>
-            <Icon name="location-outline" size={20} color="#6c757d" style={styles.inputIcon} />
+            <Icon name="location-outline" size={20} color="#A0AEC0" style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
               value={deliveryAddress}
               onChangeText={setDeliveryAddress}
               placeholder="Enter delivery address"
+              placeholderTextColor="#A0AEC0"
               multiline
             />
           </View>
@@ -299,12 +302,13 @@ export default function CartScreen({ route, navigation }) {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Phone Number</Text>
           <View style={styles.inputWrapper}>
-            <Icon name="call-outline" size={20} color="#6c757d" style={styles.inputIcon} />
+            <Icon name="call-outline" size={20} color="#A0AEC0" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               value={customerPhone}
               onChangeText={setCustomerPhone}
               placeholder="Enter phone number"
+              placeholderTextColor="#A0AEC0"
               keyboardType="phone-pad"
             />
           </View>
@@ -313,12 +317,13 @@ export default function CartScreen({ route, navigation }) {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Order Notes</Text>
           <View style={styles.inputWrapper}>
-            <Icon name="document-text-outline" size={20} color="#6c757d" style={styles.inputIcon} />
+            <Icon name="document-text-outline" size={20} color="#A0AEC0" style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
               value={notes}
               onChangeText={setNotes}
               placeholder="Any special instructions..."
+              placeholderTextColor="#A0AEC0"
               multiline
             />
           </View>
@@ -339,6 +344,7 @@ export default function CartScreen({ route, navigation }) {
         <Text style={styles.summaryLabel}>VAT / Tax:</Text>
         <Text style={styles.summaryValue}>{formatPrice(totals.tax)}</Text>
       </View>
+      <View style={styles.divider} />
       <View style={[styles.summaryRow, styles.grossRow]}>
         <Text style={styles.grossLabel}>Total Amount:</Text>
         <Text style={styles.grossValue}>{formatPrice(totals.gross)}</Text>
@@ -354,7 +360,9 @@ export default function CartScreen({ route, navigation }) {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Your Cart</Text>
         {actingAsClient && (
-          <Text style={{ marginLeft: 'auto', color: '#2a9d8f', fontWeight: 'bold' }}>For: {actingAsClient.name}</Text>
+          <View style={styles.clientBadge}>
+            <Text style={styles.clientBadgeText}>For: {actingAsClient.name}</Text>
+          </View>
         )}
       </View>
 
@@ -370,6 +378,7 @@ export default function CartScreen({ route, navigation }) {
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 180 }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
+            <Icon name="cart-outline" size={80} color="#E2E8F0" />
             <Text style={styles.emptyText}>Your cart is empty.</Text>
           </View>
         }
@@ -379,7 +388,7 @@ export default function CartScreen({ route, navigation }) {
       {totalItems > 0 && (
         <View style={styles.footer}>
           <View>
-            <Text style={styles.footerText}>Total Items: {totalItems}</Text>
+            <Text style={styles.footerText}>{totalItems} Items</Text>
             <Text style={styles.footerTotal}>Total: {formatPrice(totals.gross)}</Text>
           </View>
           <TouchableOpacity style={styles.placeOrderButton} onPress={handlePlaceOrder} disabled={isLoading}>
@@ -420,47 +429,164 @@ export default function CartScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e9ecef', backgroundColor: 'white' },
-  backButton: { marginRight: 16 },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#1d3557' },
-  card: { flexDirection: 'row', backgroundColor: 'white', borderRadius: 12, padding: 16, marginVertical: 8, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
-  productImage: { width: 50, height: 50, borderRadius: 8, marginRight: 16 },
-  infoContainer: { flex: 1 },
-  name: { fontSize: 16, fontWeight: 'bold', color: '#212529' },
-  tierPack: { fontSize: 14, color: '#6c757d', marginTop: 4 },
-  price: { fontSize: 16, fontWeight: '600', color: '#2a9d8f', marginTop: 4 },
-  quantityContainer: { flexDirection: 'row', alignItems: 'center' },
-  quantityButton: { backgroundColor: '#e9ecef', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  quantityButtonText: { color: '#1d3557', fontSize: 18, fontWeight: 'bold' },
-  quantityValue: { fontSize: 16, fontWeight: 'bold', marginHorizontal: 12 }, // Keeping for reference if needed, but replaced by quantityInput
-  quantityInput: { fontSize: 16, fontWeight: 'bold', marginHorizontal: 8, minWidth: 30, textAlign: 'center', color: '#1d3557', borderBottomWidth: 1, borderBottomColor: '#ced4da', paddingVertical: 0 },
-  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'white', padding: 16, paddingBottom: 30, borderTopWidth: 1, borderTopColor: '#e9ecef', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  footerText: { fontSize: 16, color: '#6c757d' },
-  footerTotal: { fontSize: 20, fontWeight: 'bold', color: '#1d3557', marginTop: 4 },
-  placeOrderButton: { backgroundColor: '#2a9d8f', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 },
-  placeOrderButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-  emptyContainer: { alignItems: 'center', marginTop: 50 },
-  emptyText: { fontSize: 18, color: '#6c757d' },
+  container: { flex: 1, backgroundColor: '#F8F9FC' },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 4,
+    zIndex: 10,
+  },
+  backButton: { marginRight: 16, padding: 4 },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1d3557' },
+  clientBadge: { marginLeft: 'auto', backgroundColor: '#E6FFFA', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  clientBadgeText: { color: '#2a9d8f', fontWeight: '700', fontSize: 12 },
+
+  card: { 
+    flexDirection: 'row', 
+    backgroundColor: 'white', 
+    borderRadius: 16, 
+    padding: 12, 
+    marginVertical: 8, 
+    alignItems: 'center', 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 8, 
+    elevation: 2 
+  },
+  imageContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    backgroundColor: '#F7FAFC',
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  productImage: { width: '100%', height: '100%', borderRadius: 12, resizeMode: 'contain' },
+  infoContainer: { flex: 1, marginRight: 8 },
+  name: { fontSize: 15, fontWeight: '700', color: '#2D3748', marginBottom: 4 },
+  tierPack: { fontSize: 12, color: '#A0AEC0', marginBottom: 4 },
+  price: { fontSize: 16, fontWeight: '800', color: '#2a9d8f' },
+  
+  quantityContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7FAFC', borderRadius: 12, padding: 4 },
+  quantityButton: { 
+    backgroundColor: 'white', 
+    width: 32, 
+    height: 32, 
+    borderRadius: 10, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  quantityInput: { 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    marginHorizontal: 8, 
+    minWidth: 30, 
+    textAlign: 'center', 
+    color: '#2D3748',
+    paddingVertical: 0,
+  },
+  
+  footer: { 
+    position: 'absolute', 
+    bottom: 0, 
+    left: 0, 
+    right: 0, 
+    backgroundColor: 'white', 
+    paddingVertical: 16, 
+    paddingHorizontal: 20, 
+    paddingBottom: 30, 
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  footerText: { fontSize: 12, color: '#A0AEC0', fontWeight: '600', textTransform: 'uppercase' },
+  footerTotal: { fontSize: 22, fontWeight: '800', color: '#1d3557' },
+  placeOrderButton: { 
+    backgroundColor: '#1d3557', 
+    paddingVertical: 14, 
+    paddingHorizontal: 24, 
+    borderRadius: 16,
+    shadowColor: '#1d3557',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  placeOrderButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  
+  emptyContainer: { alignItems: 'center', marginTop: 80 },
+  emptyText: { fontSize: 18, color: '#A0AEC0', marginTop: 16, fontWeight: '500' },
   
   headerContainer: { marginBottom: 10 },
-  detailsCard: { backgroundColor: 'white', borderRadius: 16, padding: 20, marginTop: 10, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
-  cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#1d3557', marginBottom: 15 },
-  itemsTitle: { fontSize: 20, fontWeight: 'bold', color: '#1d3557', marginBottom: 10, marginLeft: 4 },
+  detailsCard: { 
+    backgroundColor: 'white', 
+    borderRadius: 20, 
+    padding: 24, 
+    marginTop: 10, 
+    marginBottom: 24, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 12, 
+    elevation: 3 
+  },
+  cardTitle: { fontSize: 18, fontWeight: '700', color: '#2D3748', marginBottom: 20 },
+  itemsTitle: { fontSize: 18, fontWeight: '700', color: '#2D3748', marginBottom: 12, marginLeft: 4 },
   
-  inputGroup: { marginBottom: 15 },
-  label: { fontSize: 12, color: '#6c757d', marginBottom: 6, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  inputWrapper: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#f8f9fa', borderWidth: 1, borderColor: '#e9ecef', borderRadius: 12, paddingHorizontal: 12 },
-  inputIcon: { marginTop: 12, marginRight: 10 },
-  input: { flex: 1, fontSize: 16, color: '#212529', paddingVertical: 10 },
+  inputGroup: { marginBottom: 20 },
+  label: { fontSize: 12, color: '#718096', marginBottom: 8, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  inputWrapper: { 
+    flexDirection: 'row', 
+    alignItems: 'flex-start', 
+    backgroundColor: '#F7FAFC', 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0', 
+    borderRadius: 12, 
+    paddingHorizontal: 16 
+  },
+  inputIcon: { marginTop: 14, marginRight: 12 },
+  input: { flex: 1, fontSize: 16, color: '#2D3748', paddingVertical: 14 },
   
-  summarySection: { marginTop: 20, backgroundColor: 'white', padding: 16, borderRadius: 12, marginBottom: 20 },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  summaryLabel: { fontSize: 16, color: '#6c757d' },
-  summaryValue: { fontSize: 16, fontWeight: '600', color: '#212529' },
-  grossRow: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#e9ecef' },
-  grossLabel: { fontSize: 18, fontWeight: 'bold', color: '#1d3557' },
-  grossValue: { fontSize: 18, fontWeight: 'bold', color: '#2a9d8f' },
+  summarySection: { 
+    marginTop: 10, 
+    backgroundColor: 'white', 
+    padding: 24, 
+    borderRadius: 20, 
+    marginBottom: 20,
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 12, 
+    elevation: 3 
+  },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  summaryLabel: { fontSize: 15, color: '#718096' },
+  summaryValue: { fontSize: 15, fontWeight: '600', color: '#2D3748' },
+  divider: { height: 1, backgroundColor: '#EDF2F7', marginVertical: 12 },
+  grossRow: { marginTop: 4 },
+  grossLabel: { fontSize: 18, fontWeight: '800', color: '#1d3557' },
+  grossValue: { fontSize: 18, fontWeight: '800', color: '#2a9d8f' },
   
   // Success Modal Styles
   modalOverlay: {

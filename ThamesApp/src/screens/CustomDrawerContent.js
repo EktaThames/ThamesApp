@@ -102,6 +102,34 @@ export default function CustomDrawerContent({ navigation, onClose }) {
          
         </View>
 
+        {user?.role === 'admin' && (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.sectionTitle}>Admin</Text>
+            <View style={styles.section}>
+              <MenuItem
+                label="Manage Allocation"
+                icon="people-outline"
+                onPress={() => navigation.navigate('ManageAllocation')}
+              />
+            </View>
+          </>
+        )}
+
+        {user?.role === 'sales_rep' && (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.sectionTitle}>Sales</Text>
+            <View style={styles.section}>
+              <MenuItem
+                label="My Customers"
+                icon="people-outline"
+                onPress={() => navigation.navigate('MyCustomers')}
+              />
+            </View>
+          </>
+        )}
+
         <View style={styles.divider} />
 
         <View style={styles.section}>
