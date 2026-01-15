@@ -3,7 +3,7 @@ import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { View, Button, StyleSheet, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Image, TextInput, Modal, Alert, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { Ionicons as Icon } from '@expo/vector-icons';
 import { API_URL } from '../config/api';
 import CustomDrawerContent from './CustomDrawerContent';
 
@@ -58,9 +58,24 @@ export default function HomeScreen({ navigation, route }) {
           fetch(`${API_URL}/api/categories/sub`)
         ]);
 
-        const productsData = await productsRes.json();
-        const categoriesData = await categoriesRes.json();
-        const subcategoriesData = await subcategoriesRes.json();
+        // Helper to safely parse JSON and log errors if HTML is returned
+        const safeJson = async (response, name) => {
+          if (!response.ok) {
+            console.error(`${name} API Error: ${response.status}`);
+            return [];
+          }
+          const text = await response.text();
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            console.error(`${name} Parse Error. Received:`, text.substring(0, 100));
+            return [];
+          }
+        };
+
+        const productsData = await safeJson(productsRes, 'Products');
+        const categoriesData = await safeJson(categoriesRes, 'Categories');
+        const subcategoriesData = await safeJson(subcategoriesRes, 'Subcategories');
 
         if (Array.isArray(productsData)) {
           setTrendingProducts(productsData.slice(0, 10));

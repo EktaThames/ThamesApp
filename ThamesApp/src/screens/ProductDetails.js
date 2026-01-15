@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons as Icon } from '@expo/vector-icons';
 
 export default function ProductDetails({ route }) {
   const { product } = route.params; // Receive item from navigation
@@ -144,7 +145,7 @@ const primaryPrice = selectedPack;
       <View style={styles.footer}>
         <View style={styles.quantityContainer}>
             <TouchableOpacity style={styles.quantityButton} onPress={() => handleQuantityChange(-1)}>
-                <Text style={styles.quantityButtonText}>-</Text>
+                <Icon name="remove" size={24} color="#495057" />
             </TouchableOpacity>
             <TextInput
               style={styles.quantityInput}
@@ -153,7 +154,7 @@ const primaryPrice = selectedPack;
               onChangeText={(text) => setQuantity(Math.max(1, parseInt(text) || 1))}
             />
             <TouchableOpacity style={styles.quantityButton} onPress={() => handleQuantityChange(1)}>
-                <Text style={styles.quantityButtonText}>+</Text>
+                <Icon name="add" size={24} color="#495057" />
             </TouchableOpacity>
         </View>
         <TouchableOpacity style={styles.addToCartButton} onPress={() => alert(`${quantity} x ${selectedPack.pack_size || product.description} added to cart!`)}>

@@ -3,7 +3,7 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, Activity
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { Ionicons as Icon } from '@expo/vector-icons';
 import { API_URL } from '../config/api';
 import BarcodeScannerScreen from './BarcodeScannerScreen';
 
@@ -742,7 +742,7 @@ export default function ProductListScreen({ navigation, route }) {
   }, []);
 
   const handleImageError = useCallback((sku) => {
-    console.log('Missing Image SKU:', sku);
+    // console.log('Missing Image SKU:', sku);
     setImageErrors(prev => ({ ...prev, [sku]: true }));
   }, []);
 
@@ -831,7 +831,7 @@ export default function ProductListScreen({ navigation, route }) {
                     style={styles.quantityButton} 
                     onPress={() => updateCartQuantity(item, tier, -1)}
                   >
-                    <Text style={styles.quantityButtonText}>-</Text>
+                    <Icon name="remove" size={20} color="#1d3557" />
                   </TouchableOpacity>
                   <TextInput
                     style={styles.quantityInput}
@@ -845,7 +845,7 @@ export default function ProductListScreen({ navigation, route }) {
                   <TouchableOpacity 
                     style={styles.quantityButton} 
                     onPress={() => updateCartQuantity(item, tier, 1)}>
-                    <Text style={styles.quantityButtonText}>+</Text>
+                    <Icon name="add" size={20} color="#1d3557" />
                   </TouchableOpacity>
                 </View>
               </View>

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Alert, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { Ionicons as Icon } from '@expo/vector-icons';
 import { API_URL } from '../config/api';
 
 export default function MyProfileScreen({ navigation }) {
@@ -158,6 +158,16 @@ export default function MyProfileScreen({ navigation }) {
     }
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "To delete your account and data, please contact your sales representative or email support@thamescc.co.uk.\n\nThis action cannot be undone.",
+      [
+        { text: "OK" }
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -282,6 +292,13 @@ export default function MyProfileScreen({ navigation }) {
           </View>
           <Icon name="chevron-forward-outline" size={24} color="#6c757d" />
         </TouchableOpacity>
+
+        {/* Account Deletion (Required for App Store) */}
+        <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+          <Icon name="trash-outline" size={20} color="#e63946" style={{ marginRight: 8 }} />
+          <Text style={styles.deleteAccountText}>Request Account Deletion</Text>
+        </TouchableOpacity>
+        <View style={{ height: 40 }} />
       </ScrollView>
 
       {/* Edit Modal */}
@@ -431,6 +448,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05, 
     shadowRadius: 8, 
     elevation: 2 
+  },
+  deleteAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    padding: 12,
+  },
+  deleteAccountText: {
+    color: '#e63946',
+    fontSize: 14,
+    fontWeight: '600',
   },
   orderHistoryContent: { flexDirection: 'row', alignItems: 'center' },
   orderHistoryTextContainer: { marginLeft: 16 },

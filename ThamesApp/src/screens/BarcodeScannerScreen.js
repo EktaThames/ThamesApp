@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Alert, Platform, PermissionsAndroid, Text, AppState, Dimensions } from 'react-native';
 import { Camera, CameraType } from 'react-native-camera-kit';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { Ionicons as Icon } from '@expo/vector-icons';
 
 const { height } = Dimensions.get('window');
 

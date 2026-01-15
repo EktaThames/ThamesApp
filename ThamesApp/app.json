@@ -1,4 +1,51 @@
 {
-  "name": "ThamesApp",
-  "displayName": "ThamesCC App"
+  "name": "Thames C&C",
+  "slug": "thamescc-app",
+  "version": "1.0.0",
+  "jsEngine": "hermes",
+  "icon": "./assets/icon.png",
+  "ios": {
+    "bundleIdentifier": "com.thamescc.app",
+    "supportsTablet": true,
+    "infoPlist": {
+      "NSCameraUsageDescription": "This app uses the camera to upload images and scan content.",
+      "NSPhotoLibraryUsageDescription": "This app allows you to select images from your photo library.",
+      "NSPhotoLibraryAddUsageDescription": "This app saves images to your photo library when needed.",
+      "NSMicrophoneUsageDescription": "This app uses the microphone for media features."
+    },
+    "config": {
+      "usesNonExemptEncryption": false
+    }
+  },
+  "plugins": [
+    "expo-splash-screen",
+    [
+      "expo-build-properties",
+      {
+        "ios": {
+          "newArchEnabled": false
+        },
+        "android": {
+          "kotlinVersion": "1.9.25",
+          "newArchEnabled": false
+        }
+      }
+    ]
+  ],
+  "extra": {
+    "eas": {
+      "projectId": "342102b6-3304-48fd-910e-1464d363cbb7"
+    }
+  },
+  "android": {
+    "package": "com.thamescc.app",
+    "permissions": [
+      "android.permission.CAMERA",
+      "android.permission.RECORD_AUDIO"
+    ],
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/adaptive-icon.png",
+      "backgroundColor": "#ffffff"
+    }
+  }
 }
