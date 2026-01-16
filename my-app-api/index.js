@@ -3,6 +3,8 @@ require('dotenv').config(); // This MUST be the first line
 const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
+const cron = require('node-cron');
+const { runUpdate } = require('./runNightlyUpdate');
 
 const authRoutes = require('./routes/auth');       // Auth routes
 const productRoutes = require('./routes/products'); // Products routes
@@ -12,6 +14,7 @@ const orderRoutes = require('./routes/orders'); // Order routes
 const userRoutes = require('./routes/users'); // User routes
 const adminRoutes = require('./routes/admin'); // Admin routes
 const salesRoutes = require('./routes/sales'); // Sales routes
+const uploadRoutes = require('./routes/upload'); // Upload routes
 const checkAuth = require('./middleware/check-auth'); // Auth middleware
 const db = require('./db');                 // Database connection
 
@@ -46,10 +49,21 @@ app.use('/api/orders', checkAuth, orderRoutes); // Protected Order endpoints
 app.use('/api/users', checkAuth, userRoutes); // Protected User endpoints
 app.use('/api/admin', checkAuth, adminRoutes); // Protected Admin endpoints
 app.use('/api/sales', checkAuth, salesRoutes); // Protected Sales endpoints
+app.use('/api/upload', checkAuth, uploadRoutes); // Protected Upload endpoints
 
 // Fallback route for 404
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
+});
+
+// --- Nightly Scheduler (UK Time) ---
+// Runs at 02:00 AM every day
+cron.schedule('0 2 * * *', async () => {
+  console.log('🕒 Triggering Nightly Product Update...');
+  await runUpdate(false); // false = keep DB connection open
+}, {
+  scheduled: true,
+  timezone: "Europe/London"
 });
 
 // Start server

@@ -4,7 +4,7 @@ const { importCategories } = require('./utils/importCategories');
 const { importBrands } = require('./utils/importBrands');
 const db = require('./db');
 
-async function runUpdate() {
+async function runUpdate(closeConnection = true) {
   try {
     console.log('--- Starting Nightly Update ---');
     await importBrands();
@@ -14,10 +14,16 @@ async function runUpdate() {
   } catch (error) {
     console.error('--- Nightly Update FAILED ---', error);
   } finally {
-    console.log('Closing database connection pool...');
-    await db.pool.end();
-    console.log('Connection pool closed.');
+    if (closeConnection) {
+      console.log('Closing database connection pool...');
+      await db.pool.end();
+      console.log('Connection pool closed.');
+    }
   }
 }
 
-runUpdate();
+if (require.main === module) {
+  runUpdate(true);
+}
+
+module.exports = { runUpdate };

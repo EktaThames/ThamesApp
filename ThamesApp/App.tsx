@@ -17,6 +17,8 @@ import OrderDetailScreen from './src/screens/OrderDetailScreen';
 import MyProfileScreen from './src/screens/MyProfileScreen';
 import ManageAllocationScreen from './src/screens/ManageAllocationScreen';
 import MyCustomersScreen from './src/screens/MyCustomersScreen';
+import AdminUploadScreen from './src/screens/AdminUploadScreen';
+
 
 SplashScreen.preventAutoHideAsync();
 
@@ -68,6 +70,8 @@ export default function App() {
           <Stack.Screen name="MyProfile" component={MyProfileScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ManageAllocation" component={ManageAllocationScreen} options={{ title: 'Manage Allocation' }} />
           <Stack.Screen name="MyCustomers" component={MyCustomersScreen} options={{ title: 'My Customers' }} />
+          <Stack.Screen name="AdminUpload" component={AdminUploadScreen} />
+
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

@@ -119,6 +119,11 @@ export default function CustomDrawerContent({ navigation, onClose }) {
                 icon="people-outline"
                 onPress={() => navigation.navigate('ManageAllocation')}
               />
+              <MenuItem
+                label="Upload Products"
+                icon="cloud-upload-outline"
+                onPress={() => navigation.navigate('AdminUpload')}
+              />
             </View>
           </>
         )}
