@@ -771,7 +771,7 @@ export default function ProductListScreen({ navigation, route }) {
             )}
             {isClearance && (
               <View style={[styles.badge, styles.clearanceBadge]}>
-                <Text style={styles.badgeText}>Sale</Text>
+                <Text style={styles.badgeText}>Clearance</Text>
               </View>
             )}
             {isPromotion && (

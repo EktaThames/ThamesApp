@@ -93,6 +93,13 @@ export default function CustomDrawerContent({ navigation, onClose }) {
             onPress={() => navigation.navigate('ProductList', { openFilters: true })}
           />
           <MenuItem
+            label="Promotions"
+            icon="flame-outline"
+            onPress={() => navigation.navigate('ProductList', { 
+              activeFilters: { categories: [], subcategories: [], brands: [], pmp: false, promotion: true, clearance: false } 
+            })}
+          />
+          <MenuItem
             label="Clearance"
             icon="pricetags-outline"
             onPress={() => navigation.navigate('ProductList', { 
