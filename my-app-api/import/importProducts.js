@@ -29,8 +29,20 @@ const cleanBarcode = (v) => {
 
 async function importProducts() {
   try {
-    const filePath = path.join(__dirname, "..", "data", "products.csv");
-    console.log("Reading CSV...");
+    const dataDir = path.join(__dirname, "..", "data");
+    
+    // Find the latest products CSV file (products.csv or products_TIMESTAMP.csv)
+    const files = fs.readdirSync(dataDir)
+      .filter(file => file.startsWith('products') && file.endsWith('.csv'))
+      .map(file => ({
+        name: file,
+        time: fs.statSync(path.join(dataDir, file)).mtime.getTime()
+      }))
+      .sort((a, b) => b.time - a.time); // Sort descending by time (newest first)
+
+    if (files.length === 0) { console.log("No product CSV files found."); return; }
+    const filePath = path.join(dataDir, files[0].name);
+    console.log(`Reading CSV from: ${files[0].name}`);
 
     // Normalize headers
     const normalizeHeader = (h) =>
