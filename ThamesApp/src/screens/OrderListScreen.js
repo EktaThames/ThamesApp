@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -118,28 +118,39 @@ export default function OrderListScreen({ navigation }) {
       }
 
       const csvContent = header + rows.join('\n');
-      console.log('--- CSV EXPORT START ---');
-      console.log(csvContent);
-      console.log('--- CSV EXPORT END ---');
+      // console.log('--- CSV EXPORT START ---');
+      // console.log(csvContent);
+      // console.log('--- CSV EXPORT END ---');
 
-      // Save to File
       const filename = `Orders_Export_${new Date().getTime()}.csv`;
-      const fileUri = FileSystem.cacheDirectory + filename;
-      
-      await FileSystem.writeAsStringAsync(fileUri, csvContent, {
-        encoding: FileSystem.EncodingType.UTF8
-      });
-      console.log('File saved to:', fileUri);
 
-      // Share
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'text/csv',
-          dialogTitle: 'Export Orders',
-          UTI: 'public.comma-separated-values-text' // Helps iOS recognize the file type
-        });
+      if (Platform.OS === 'android') {
+        // Android: Save directly to user-selected folder (e.g. Downloads)
+        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+        if (permissions.granted) {
+          const uri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, filename, 'text/csv');
+          await FileSystem.writeAsStringAsync(uri, csvContent, { encoding: FileSystem.EncodingType.UTF8 });
+          Alert.alert('Success', 'File saved successfully to your device.');
+        } else {
+          // User cancelled folder selection
+          return;
+        }
       } else {
-        Alert.alert('Error', 'Sharing is not available on this device');
+        // iOS: Use Share Sheet (Save to Files)
+        const fileUri = FileSystem.cacheDirectory + filename;
+        await FileSystem.writeAsStringAsync(fileUri, csvContent, {
+          encoding: FileSystem.EncodingType.UTF8
+        });
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'text/csv',
+            dialogTitle: 'Export Orders',
+            UTI: 'public.comma-separated-values-text' // Helps iOS recognize the file type
+          });
+        } else {
+          Alert.alert('Error', 'Sharing is not available on this device');
+        }
       }
     } catch (error) {
       console.error('Export error:', error);
