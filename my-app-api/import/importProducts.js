@@ -31,6 +31,12 @@ async function importProducts() {
   try {
     const dataDir = path.join(__dirname, "..", "data");
     
+    // Safety check: Ensure folder exists before reading
+    if (!fs.existsSync(dataDir)) {
+      console.log("Data directory does not exist. Skipping import.");
+      return;
+    }
+    
     // Find the latest products CSV file (products.csv or products_TIMESTAMP.csv)
     const files = fs.readdirSync(dataDir)
       .filter(file => file.startsWith('products') && file.endsWith('.csv'))
