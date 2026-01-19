@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,6 +22,7 @@ export default function OrderListScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const fetchOrders = async () => {
     try {
@@ -130,7 +131,7 @@ export default function OrderListScreen({ navigation }) {
         if (permissions.granted) {
           const uri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, filename, 'text/csv');
           await FileSystem.writeAsStringAsync(uri, csvContent, { encoding: FileSystem.EncodingType.UTF8 });
-          Alert.alert('Success', 'File saved successfully to your device.');
+          setShowSuccessModal(true);
         } else {
           // User cancelled folder selection
           return;
@@ -236,6 +237,27 @@ export default function OrderListScreen({ navigation }) {
           }
         />
       )}
+
+      {/* Success Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showSuccessModal}
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModalContent}>
+            <View style={styles.successIconContainer}>
+              <Icon name="checkmark-outline" size={50} color="white" />
+            </View>
+            <Text style={styles.successTitle}>Export Complete!</Text>
+            <Text style={styles.successMessage}>File saved successfully to your device.</Text>
+            <TouchableOpacity style={styles.successButton} onPress={() => setShowSuccessModal(false)}>
+              <Text style={styles.successButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -267,4 +289,54 @@ const styles = StyleSheet.create({
   
   emptyContainer: { alignItems: 'center', marginTop: 50 },
   emptyText: { fontSize: 16, color: '#6c757d' },
+
+  // Success Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successModalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  successIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#2a9d8f',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#2a9d8f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  successTitle: { fontSize: 22, fontWeight: '800', color: '#1d3557', marginBottom: 12, textAlign: 'center' },
+  successMessage: { fontSize: 15, color: '#6c757d', textAlign: 'center', marginBottom: 32, lineHeight: 22 },
+  successButton: {
+    backgroundColor: '#1d3557',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#1d3557',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  successButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });
