@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { API_URL } from '../config/api';
 
 const getStatusColor = (status) => {
@@ -50,6 +52,55 @@ export default function OrderListScreen({ navigation }) {
     };
     init();
   }, []);
+
+  const handleExport = async () => {
+    if (orders.length === 0) {
+      Alert.alert('No Orders', 'There are no orders to export.');
+      return;
+    }
+
+    try {
+      // Create CSV Content
+      const header = 'Order ID,Date,Status,Customer,Placed By,Total Amount\n';
+      const rows = orders.map(order => {
+        const date = new Date(order.created_at).toLocaleDateString();
+        const customer = order.customer_name || order.customer_username || 'Unknown';
+        const creator = order.creator_name || order.creator_username || customer;
+        // Escape commas in fields
+        const clean = (text) => `"${String(text || '').replace(/"/g, '""')}"`;
+        
+        return `${order.id},${date},${order.status},${clean(customer)},${clean(creator)},${order.total_amount}`;
+      }).join('\n');
+
+      const csvContent = header + rows;
+      console.log('--- CSV EXPORT START ---');
+      console.log(csvContent);
+      console.log('--- CSV EXPORT END ---');
+
+      // Save to File
+      const filename = `Orders_Export_${new Date().getTime()}.csv`;
+      const fileUri = FileSystem.cacheDirectory + filename;
+      
+      await FileSystem.writeAsStringAsync(fileUri, csvContent, {
+        encoding: FileSystem.EncodingType.UTF8
+      });
+      console.log('File saved to:', fileUri);
+
+      // Share
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'text/csv',
+          dialogTitle: 'Export Orders',
+          UTI: 'public.comma-separated-values-text' // Helps iOS recognize the file type
+        });
+      } else {
+        Alert.alert('Error', 'Sharing is not available on this device');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert('Export Failed', 'An error occurred while exporting orders.');
+    }
+  };
 
   const renderOrderItem = ({ item }) => {
     // Determine display text for "Placed by"
@@ -107,6 +158,9 @@ export default function OrderListScreen({ navigation }) {
           <Icon name="arrow-back-outline" size={28} color="#1d3557" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Orders</Text>
+        <TouchableOpacity onPress={handleExport} style={styles.exportButton}>
+          <Icon name="download-outline" size={24} color="#1d3557" />
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -132,7 +186,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f4f5f7' },
   header: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#e9ecef', elevation: 2 },
   backButton: { marginRight: 16 },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#1d3557' },
+  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#1d3557', flex: 1 },
+  exportButton: { padding: 8 },
   
   card: { backgroundColor: 'white', borderRadius: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: {width: 0, height: 2}, elevation: 3, overflow: 'hidden' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 16 },
