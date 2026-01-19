@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
@@ -9,6 +9,10 @@ import { API_URL } from '../config/api';
 export default function AdminUploadScreen({ navigation }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   const pickDocument = async () => {
     try {
