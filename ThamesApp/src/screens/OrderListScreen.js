@@ -21,6 +21,7 @@ export default function OrderListScreen({ navigation }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const fetchOrders = async () => {
     try {
@@ -59,20 +60,64 @@ export default function OrderListScreen({ navigation }) {
       return;
     }
 
+    setExporting(true);
     try {
+      const token = await AsyncStorage.getItem('userToken');
+      
       // Create CSV Content
-      const header = 'Order ID,Date,Status,Customer,Placed By,Total Amount\n';
-      const rows = orders.map(order => {
-        const date = new Date(order.created_at).toLocaleDateString();
-        const customer = order.customer_name || order.customer_username || 'Unknown';
-        const creator = order.creator_name || order.creator_username || customer;
-        // Escape commas in fields
-        const clean = (text) => `"${String(text || '').replace(/"/g, '""')}"`;
-        
-        return `${order.id},${date},${order.status},${clean(customer)},${clean(creator)},${order.total_amount}`;
-      }).join('\n');
+      const header = 'Order ID,Date,Status,Customer Name,Customer Email,Delivery Address,Phone,Notes,Placed By,Product SKU,Product Name,Pack Size,Quantity,Unit Price,Line Total\n';
+      
+      const rows = [];
 
-      const csvContent = header + rows;
+      // Fetch full details for each order to get line items
+      for (const orderSummary of orders) {
+        const res = await fetch(`${API_URL}/api/orders/${orderSummary.id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!res.ok) continue;
+        
+        const fullOrder = await res.json();
+        const date = new Date(fullOrder.created_at).toLocaleDateString();
+        const customer = fullOrder.customer_name || fullOrder.customer_username || 'Unknown';
+        const email = fullOrder.customer_username || ''; 
+        const creator = fullOrder.creator_name || fullOrder.creator_username || customer;
+        const clean = (text) => `"${String(text || '').replace(/"/g, '""')}"`;
+
+        if (fullOrder.items && fullOrder.items.length > 0) {
+          fullOrder.items.forEach(item => {
+            const lineTotal = (parseFloat(item.price) * item.quantity).toFixed(2);
+            const row = [
+              fullOrder.id,
+              date,
+              fullOrder.status,
+              clean(customer),
+              clean(email),
+              clean(fullOrder.delivery_address),
+              clean(fullOrder.customer_phone),
+              clean(fullOrder.notes),
+              clean(creator),
+              clean(item.product.item),
+              clean(item.product.description),
+              clean(item.pack_size || `Pack ${item.tier}`),
+              item.quantity,
+              parseFloat(item.price).toFixed(2),
+              lineTotal
+            ].join(',');
+            rows.push(row);
+          });
+        } else {
+          // Handle empty order case
+          const row = [
+            fullOrder.id, date, fullOrder.status, clean(customer), clean(email), 
+            clean(fullOrder.delivery_address), clean(fullOrder.customer_phone), clean(fullOrder.notes), clean(creator),
+            '', '', '', '', '', '0.00'
+          ].join(',');
+          rows.push(row);
+        }
+      }
+
+      const csvContent = header + rows.join('\n');
       console.log('--- CSV EXPORT START ---');
       console.log(csvContent);
       console.log('--- CSV EXPORT END ---');
@@ -99,6 +144,8 @@ export default function OrderListScreen({ navigation }) {
     } catch (error) {
       console.error('Export error:', error);
       Alert.alert('Export Failed', 'An error occurred while exporting orders.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -158,8 +205,8 @@ export default function OrderListScreen({ navigation }) {
           <Icon name="arrow-back-outline" size={28} color="#1d3557" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Orders</Text>
-        <TouchableOpacity onPress={handleExport} style={styles.exportButton}>
-          <Icon name="download-outline" size={24} color="#1d3557" />
+        <TouchableOpacity onPress={handleExport} style={styles.exportButton} disabled={exporting}>
+          {exporting ? <ActivityIndicator size="small" color="#1d3557" /> : <Icon name="download-outline" size={24} color="#1d3557" />}
         </TouchableOpacity>
       </View>
 

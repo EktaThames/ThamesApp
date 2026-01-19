@@ -156,12 +156,14 @@ router.get('/:orderId', async (req, res, next) => {
                    u.username as customer_username, u.name as customer_name,
                    c.username as creator_username, c.name as creator_name,
                    i.id as item_id, i.quantity, i.price, i.tier,
-                   p.id as product_id, p.description, p.item
+                   p.id as product_id, p.description, p.item,
+                   pp.pack_size
             FROM orders o
             JOIN users u ON o.user_id = u.id
             LEFT JOIN users c ON o.created_by = c.id
             JOIN order_items i ON o.id = i.order_id
             JOIN products p ON i.product_id = p.id
+            LEFT JOIN product_pricing pp ON i.product_id = pp.product_id AND i.tier = pp.tier
             WHERE o.id = $1 ${accessCheck}
         `;
         
@@ -192,6 +194,7 @@ router.get('/:orderId', async (req, res, next) => {
                 quantity: row.quantity,
                 price: row.price,
                 tier: row.tier,
+                pack_size: row.pack_size,
                 product_id: row.product_id,
                 product: {
                     id: row.product_id,
