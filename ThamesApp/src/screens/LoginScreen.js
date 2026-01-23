@@ -96,6 +96,17 @@ export default function LoginScreen({ navigation }) {
           <Icon name="chevron-forward" size={20} color="#CBD5E0" />
         </TouchableOpacity>
         
+        <TouchableOpacity style={styles.roleButton} onPress={() => setUserType('picker')}>
+          <View style={[styles.iconCircle, { backgroundColor: '#FFF5F5' }]}>
+            <Icon name="cube-outline" size={24} color="#E53E3E" />
+          </View>
+          <View style={styles.roleTextContainer}>
+            <Text style={styles.roleButtonTitle}>Warehouse Picker</Text>
+            <Text style={styles.roleButtonSubtitle}>Process & pack orders</Text>
+          </View>
+          <Icon name="chevron-forward" size={20} color="#CBD5E0" />
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.roleButton} onPress={() => setUserType('admin')}>
           <View style={[styles.iconCircle, { backgroundColor: '#FAF5FF' }]}>
             <Icon name="shield-checkmark" size={24} color="#805AD5" />
@@ -143,6 +154,8 @@ export default function LoginScreen({ navigation }) {
               ? 'Email Address'
               : userType === 'customer'
               ? 'Customer ID'
+              : userType === 'picker'
+              ? 'Picker ID'
               : 'Sales ID'
           }
           value={email}
@@ -171,6 +184,13 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.loginButtonText}>Login</Text>
         )}
       </TouchableOpacity>
+
+      {userType === 'customer' && (
+        <View style={styles.registerContainer}>
+          <Text style={styles.registerText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}><Text style={styles.registerLink}>Register here</Text></TouchableOpacity>
+        </View>
+      )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -289,4 +309,7 @@ const styles = StyleSheet.create({
   },
   loginButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
   errorText: { color: '#e63946', marginBottom: 16, textAlign: 'center', backgroundColor: '#FFF5F5', padding: 10, borderRadius: 8, overflow: 'hidden' },
+  registerContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
+  registerText: { color: '#718096' },
+  registerLink: { color: '#1d3557', fontWeight: 'bold' },
 });

@@ -124,6 +124,11 @@ export default function CustomDrawerContent({ navigation, onClose }) {
                 icon="cloud-upload-outline"
                 onPress={() => navigation.navigate('AdminUpload')}
               />
+              <MenuItem
+                label="Pending Approvals"
+                icon="person-add-outline"
+                onPress={() => navigation.navigate('AdminUserApproval')}
+              />
             </View>
           </>
         )}

@@ -1,5 +1,7 @@
 // runNightlyUpdate.js
 const { importProducts } = require('./import/importProducts');
+// const { importProductsOdoo } = require('./import/importProductsOdoo');
+// const { importCustomersOdoo } = require('./import/importCustomersOdoo');
 const { importCategories } = require('./utils/importCategories');
 const { importBrands } = require('./utils/importBrands');
 const db = require('./db');
@@ -9,7 +11,9 @@ async function runUpdate(closeConnection = true) {
     console.log('--- Starting Nightly Update ---');
     await importBrands();
     await importCategories();
+    // await importCustomersOdoo();
     await importProducts();
+    // await importProductsOdoo();
     console.log('--- Nightly Update Finished ---');
   } catch (error) {
     console.error('--- Nightly Update FAILED ---', error);

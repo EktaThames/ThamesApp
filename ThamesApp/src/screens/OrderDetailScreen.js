@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image, Alert, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { API_URL } from '../config/api';
 
 const getStatusColor = (status) => {
@@ -20,12 +22,22 @@ export default function OrderDetailScreen({ route, navigation }) {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserRole, setCurrentUserRole] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successConfig, setSuccessConfig] = useState({ title: '', message: '' });
+  const [navigateOnClose, setNavigateOnClose] = useState(false);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
       try {
         const token = await AsyncStorage.getItem('userToken');
         const storedUserId = await AsyncStorage.getItem('userId');
+        const userDataStr = await AsyncStorage.getItem('userData');
+        if (userDataStr) {
+          const userData = JSON.parse(userDataStr);
+          setCurrentUserRole(userData.role);
+        }
         setCurrentUserId(storedUserId);
         const response = await fetch(`${API_URL}/api/orders/${orderId}`, {
           headers: {
@@ -48,6 +60,108 @@ export default function OrderDetailScreen({ route, navigation }) {
 
     fetchOrderDetails();
   }, [orderId]);
+
+  const handleExport = async () => {
+    if (!order) return;
+
+    setExporting(true);
+    try {
+      // CSV Header
+      const header = 'Order ID,Date,Status,Customer Name,Customer Email,Delivery Address,Phone,Notes,Placed By,Product SKU,Product Name,Pack Size,Quantity,Unit Price,Line Total\n';
+      
+      const date = new Date(order.created_at).toLocaleDateString();
+      const customer = order.customer_name || order.customer_username || 'Unknown';
+      const email = order.customer_username || ''; 
+      const creator = order.creator_name || order.creator_username || customer;
+      const clean = (text) => `"${String(text || '').replace(/"/g, '""')}"`;
+
+      const rows = [];
+      if (order.items && order.items.length > 0) {
+        order.items.forEach(item => {
+          const lineTotal = (parseFloat(item.price) * item.quantity).toFixed(2);
+          const row = [
+            order.id,
+            date,
+            order.status,
+            clean(customer),
+            clean(email),
+            clean(order.delivery_address),
+            clean(order.customer_phone),
+            clean(order.notes),
+            clean(creator),
+            clean(item.product.item),
+            clean(item.product.description),
+            clean(item.pack_size || `Pack ${item.tier}`),
+            item.quantity,
+            parseFloat(item.price).toFixed(2),
+            lineTotal
+          ].join(',');
+          rows.push(row);
+        });
+      } else {
+        const row = [
+          order.id, date, order.status, clean(customer), clean(email), 
+          clean(order.delivery_address), clean(order.customer_phone), clean(order.notes), clean(creator),
+          '', '', '', '', '', '0.00'
+        ].join(',');
+        rows.push(row);
+      }
+
+      const csvContent = header + rows.join('\n');
+      const filename = `Order_${order.id}_Export_${new Date().getTime()}.csv`;
+
+      if (Platform.OS === 'android') {
+        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+        if (permissions.granted) {
+          const uri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, filename, 'text/csv');
+          await FileSystem.writeAsStringAsync(uri, csvContent, { encoding: FileSystem.EncodingType.UTF8 });
+          setSuccessConfig({ title: 'Export Complete!', message: 'File saved successfully.' });
+          setNavigateOnClose(false);
+          setShowSuccessModal(true);
+        }
+      } else {
+        const fileUri = FileSystem.cacheDirectory + filename;
+        await FileSystem.writeAsStringAsync(fileUri, csvContent, { encoding: FileSystem.EncodingType.UTF8 });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, { mimeType: 'text/csv', dialogTitle: `Export Order #${order.id}`, UTI: 'public.comma-separated-values-text' });
+        } else {
+          Alert.alert('Error', 'Sharing is not available on this device');
+        }
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert('Export Failed', 'An error occurred while exporting the order.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleStatusUpdate = async (newStatus) => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch(`${API_URL}/api/orders/${order.id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        setOrder(prev => ({ ...prev, status: newStatus }));
+        setSuccessConfig({ title: 'Success!', message: `Order marked as ${newStatus}.` });
+        if (newStatus === 'picked') {
+            setNavigateOnClose(true);
+        }
+        setShowSuccessModal(true);
+      } else {
+        Alert.alert('Error', 'Failed to update status');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Network error');
+    }
+  };
 
   const renderItem = ({ item }) => {
     const targetId = item.product?.id || item.product_id;
@@ -111,6 +225,9 @@ export default function OrderDetailScreen({ route, navigation }) {
           <Icon name="arrow-back-outline" size={28} color="#1d3557" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Order #{order.id}</Text>
+        <TouchableOpacity onPress={handleExport} style={styles.exportButton} disabled={exporting}>
+          {exporting ? <ActivityIndicator size="small" color="#1d3557" /> : <Icon name="download-outline" size={24} color="#1d3557" />}
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -172,10 +289,42 @@ export default function OrderDetailScreen({ route, navigation }) {
                 </View>
               </View>
             </View>
+
+            {/* Picker Action Button */}
+            {currentUserRole === 'picker' && ['placed', 'order placed'].includes(order.status?.toLowerCase()) && (
+              <TouchableOpacity style={styles.actionButton} onPress={() => handleStatusUpdate('picked')}>
+                <Icon name="checkmark-circle-outline" size={24} color="white" style={{ marginRight: 8 }} />
+                <Text style={styles.actionButtonText}>Mark as Picked</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
         ListHeaderComponentStyle={{ marginBottom: 20 }}
       />
+
+      {/* Success Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showSuccessModal}
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModalContent}>
+            <View style={styles.successIconContainer}>
+              <Icon name="checkmark-outline" size={50} color="white" />
+            </View>
+            <Text style={styles.successTitle}>{successConfig.title}</Text>
+            <Text style={styles.successMessage}>{successConfig.message}</Text>
+            <TouchableOpacity style={styles.successButton} onPress={() => {
+              setShowSuccessModal(false);
+              if (navigateOnClose) navigation.goBack();
+            }}>
+              <Text style={styles.successButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -197,7 +346,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   backButton: { marginRight: 16, padding: 4 },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1d3557' },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1d3557', flex: 1 },
+  exportButton: { padding: 8 },
   
   summaryCard: { 
     backgroundColor: 'white', 
@@ -254,4 +404,66 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 15, fontWeight: '700', color: '#2D3748', marginBottom: 4 },
   itemMeta: { fontSize: 13, color: '#718096', marginTop: 2 },
   itemPrice: { fontSize: 16, fontWeight: '700', color: '#2a9d8f', marginTop: 6 },
+
+  actionButton: {
+    backgroundColor: '#2a9d8f',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    marginTop: 24,
+    elevation: 4,
+  },
+  actionButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+
+  // Success Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successModalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  successIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#2a9d8f',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#2a9d8f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  successTitle: { fontSize: 22, fontWeight: '800', color: '#1d3557', marginBottom: 12, textAlign: 'center' },
+  successMessage: { fontSize: 15, color: '#6c757d', textAlign: 'center', marginBottom: 32, lineHeight: 22 },
+  successButton: {
+    backgroundColor: '#1d3557',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#1d3557',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  successButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });

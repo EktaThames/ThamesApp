@@ -4,9 +4,11 @@ const db = require('./db');
 
 const setupTables = async () => {
   console.log('Starting database setup...');
-  const client = await db.pool.connect();
+  let client;
 
   try {
+    client = await db.pool.connect();
+
     // Drop tables
     await client.query(`
       DROP TABLE IF EXISTS product_pricing, product_barcodes, products, order_items, orders, customers, users, subcategories, categories, brands CASCADE;
@@ -38,6 +40,7 @@ const setupTables = async () => {
         email VARCHAR(255),
         phone VARCHAR(50),
         address TEXT,
+        is_approved BOOLEAN DEFAULT FALSE,
         sales_rep_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         CONSTRAINT check_address_role CHECK (role = 'customer' OR address IS NULL),
         CONSTRAINT check_sales_rep_role CHECK (role = 'customer' OR sales_rep_id IS NULL)
@@ -78,7 +81,7 @@ const setupTables = async () => {
       CREATE TABLE products (
         id SERIAL PRIMARY KEY,
         item VARCHAR(50) UNIQUE NOT NULL,
-        vat VARCHAR(10),
+        vat VARCHAR(50),
         brand_id INTEGER REFERENCES brands(id),
         hierarchy1 INTEGER,
         hierarchy2 INTEGER,
@@ -180,7 +183,8 @@ const setupTables = async () => {
   } catch (err) {
     console.error("❌ Error during setup:", err);
   } finally {
-    client.release();
+    if (client) client.release();
+    await db.pool.end();
   }
 };
 

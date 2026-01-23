@@ -36,7 +36,16 @@ const primaryPrice = selectedPack;
           <View style={styles.headerContainer}>
             <Text style={styles.title}>{product.description}</Text>
             {primaryPrice && (
-              <Text style={styles.mainPrice}>{formatPrice(primaryPrice.sell_price)}</Text>
+              <View style={{ alignItems: 'flex-end' }}>
+                {primaryPrice.promo_price ? (
+                  <>
+                    <Text style={[styles.mainPrice, { color: '#e63946' }]}>{formatPrice(primaryPrice.promo_price)}</Text>
+                    <Text style={[styles.originalPrice, { fontSize: 16, marginTop: 0 }]}>{formatPrice(primaryPrice.sell_price)}</Text>
+                  </>
+                ) : (
+                  <Text style={styles.mainPrice}>{formatPrice(primaryPrice.sell_price)}</Text>
+                )}
+              </View>
             )}
           </View>
           <Text style={styles.packDescription}>{product.pack_description}</Text>
@@ -76,9 +85,6 @@ const primaryPrice = selectedPack;
           <View>
             <Text style={styles.packLabel}>
               {p.pack_size || `Pack ${p.tier}`}
-            </Text>
-            <Text style={styles.packDescriptionText}>
-              {p.description || product.pack_description}
             </Text>
           </View>
 

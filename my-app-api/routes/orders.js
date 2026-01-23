@@ -63,6 +63,17 @@ router.get('/', async (req, res, next) => {
                     ORDER BY o.order_date DESC
                 `;
             }
+        } else if (req.user.role === 'picker') {
+            // Pickers see all orders
+            query = `
+                SELECT o.*, o.order_date as created_at, u.name as customer_name, u.username as customer_username,
+                       c.name as creator_name, c.username as creator_username
+                FROM orders o
+                JOIN users u ON o.user_id = u.id
+                LEFT JOIN users c ON o.created_by = c.id
+                ORDER BY CASE WHEN LOWER(o.status) IN ('placed', 'order placed') THEN 1 ELSE 2 END, o.order_date ASC
+            `;
+            params = [];
         } else {
             // Customers see only their own orders
             query = `
@@ -133,6 +144,26 @@ router.post('/', async (req, res, next) => {
     }
 });
 
+// PUT /api/orders/:orderId/status - Update order status (e.g. for Pickers)
+router.put('/:orderId/status', async (req, res) => {
+    try {
+        const { status } = req.body;
+        const { orderId } = req.params;
+        
+        // Validate status
+        const validStatuses = ['placed', 'picked', 'completed'];
+        if (!validStatuses.includes(status)) {
+             return res.status(400).json({ message: 'Invalid status' });
+        }
+
+        await db.query('UPDATE orders SET status = $1 WHERE id = $2', [status, orderId]);
+        res.json({ message: `Order status updated to ${status}` });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Handle incoming GET requests to /orders/:orderId
 router.get('/:orderId', async (req, res, next) => {
     try {
@@ -147,6 +178,10 @@ router.get('/:orderId', async (req, res, next) => {
         } else if (req.user.role === 'sales_rep') {
             // Allow if order belongs to rep OR one of their customers
             accessCheck = 'AND (o.user_id = $2 OR o.user_id IN (SELECT id FROM users WHERE sales_rep_id = $2))';
+        } else if (req.user.role === 'picker') {
+            // Pickers can see any order
+            accessCheck = '';
+            params = [orderId];
         }
 
         // Fetch order details along with product info

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
@@ -46,14 +47,14 @@ export default function OrderListScreen({ navigation }) {
     }
   };
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     const init = async () => {
       const storedUserId = await AsyncStorage.getItem('userId');
       setCurrentUserId(storedUserId);
       fetchOrders();
     };
     init();
-  }, []);
+  }, []));
 
   const handleExport = async () => {
     if (orders.length === 0) {
@@ -161,6 +162,73 @@ export default function OrderListScreen({ navigation }) {
     }
   };
 
+  const handleSingleExport = async (orderId) => {
+    setExporting(true);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const res = await fetch(`${API_URL}/api/orders/${orderId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!res.ok) throw new Error('Failed to fetch order details');
+
+      const fullOrder = await res.json();
+      
+      const header = 'Order ID,Date,Status,Customer Name,Customer Email,Delivery Address,Phone,Notes,Placed By,Product SKU,Product Name,Pack Size,Quantity,Unit Price,Line Total\n';
+      const date = new Date(fullOrder.created_at).toLocaleDateString();
+      const customer = fullOrder.customer_name || fullOrder.customer_username || 'Unknown';
+      const email = fullOrder.customer_username || ''; 
+      const creator = fullOrder.creator_name || fullOrder.creator_username || customer;
+      const clean = (text) => `"${String(text || '').replace(/"/g, '""')}"`;
+
+      const rows = [];
+      if (fullOrder.items && fullOrder.items.length > 0) {
+        fullOrder.items.forEach(item => {
+          const lineTotal = (parseFloat(item.price) * item.quantity).toFixed(2);
+          const row = [
+            fullOrder.id, date, fullOrder.status, clean(customer), clean(email),
+            clean(fullOrder.delivery_address), clean(fullOrder.customer_phone), clean(fullOrder.notes), clean(creator),
+            clean(item.product.item), clean(item.product.description), clean(item.pack_size || `Pack ${item.tier}`),
+            item.quantity, parseFloat(item.price).toFixed(2), lineTotal
+          ].join(',');
+          rows.push(row);
+        });
+      } else {
+        const row = [
+          fullOrder.id, date, fullOrder.status, clean(customer), clean(email), 
+          clean(fullOrder.delivery_address), clean(fullOrder.customer_phone), clean(fullOrder.notes), clean(creator),
+          '', '', '', '', '', '0.00'
+        ].join(',');
+        rows.push(row);
+      }
+
+      const csvContent = header + rows.join('\n');
+      const filename = `Order_${fullOrder.id}_Export_${new Date().getTime()}.csv`;
+
+      if (Platform.OS === 'android') {
+        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+        if (permissions.granted) {
+          const uri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, filename, 'text/csv');
+          await FileSystem.writeAsStringAsync(uri, csvContent, { encoding: FileSystem.EncodingType.UTF8 });
+          setShowSuccessModal(true);
+        }
+      } else {
+        const fileUri = FileSystem.cacheDirectory + filename;
+        await FileSystem.writeAsStringAsync(fileUri, csvContent, { encoding: FileSystem.EncodingType.UTF8 });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, { mimeType: 'text/csv', dialogTitle: `Export Order #${fullOrder.id}`, UTI: 'public.comma-separated-values-text' });
+        } else {
+          Alert.alert('Error', 'Sharing is not available on this device');
+        }
+      }
+    } catch (error) {
+      console.error('Single Export error:', error);
+      Alert.alert('Export Failed', 'An error occurred while exporting the order.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const renderOrderItem = ({ item }) => {
     // Determine display text for "Placed by"
     const customerName = item.customer_name || item.customer_username || 'Customer';
@@ -189,8 +257,17 @@ export default function OrderListScreen({ navigation }) {
             <Text style={styles.orderId}>Order #{item.id}</Text>
             <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
-            <Text style={[styles.statusText, { color: statusColor }]}>{item.status}</Text>
+          <View style={{ alignItems: 'flex-end' }}>
+            <View style={[styles.statusBadge, { backgroundColor: statusColor + '15', marginBottom: 6 }]}>
+              <Text style={[styles.statusText, { color: statusColor }]}>{item.status}</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.singleExportButton} 
+              onPress={() => handleSingleExport(item.id)}
+            >
+              <Icon name="download-outline" size={16} color="#1d3557" />
+              <Text style={styles.singleExportText}>Export</Text>
+            </TouchableOpacity>
           </View>
         </View>
         
@@ -276,6 +353,18 @@ const styles = StyleSheet.create({
   
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   statusText: { fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' },
+  
+  singleExportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F7FAFC',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#EDF2F7'
+  },
+  singleExportText: { fontSize: 12, fontWeight: '600', color: '#1d3557', marginLeft: 4 },
   
   divider: { height: 1, backgroundColor: '#f1f3f5', marginHorizontal: 16 },
   

@@ -103,7 +103,7 @@ router.get('/', async (req, res) => {
     const barcodes = barcodeResult.rows;
 
     const pricingResult = await db.query(
-      'SELECT * FROM product_pricing WHERE product_id = ANY($1::int[])',
+      'SELECT * FROM product_pricing WHERE product_id = ANY($1::int[]) ORDER BY product_id, tier ASC',
       [productIds]
     );
     const pricing = pricingResult.rows;

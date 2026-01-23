@@ -18,6 +18,8 @@ import MyProfileScreen from './src/screens/MyProfileScreen';
 import ManageAllocationScreen from './src/screens/ManageAllocationScreen';
 import MyCustomersScreen from './src/screens/MyCustomersScreen';
 import AdminUploadScreen from './src/screens/AdminUploadScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
+import AdminUserApprovalScreen from './src/screens/AdminUserApprovalScreen';
 
 
 SplashScreen.preventAutoHideAsync();
@@ -71,6 +73,8 @@ export default function App() {
           <Stack.Screen name="ManageAllocation" component={ManageAllocationScreen} options={{ title: 'Manage Allocation' }} />
           <Stack.Screen name="MyCustomers" component={MyCustomersScreen} options={{ title: 'My Customers' }} />
           <Stack.Screen name="AdminUpload" component={AdminUploadScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+<Stack.Screen name="AdminUserApproval" component={AdminUserApprovalScreen} />
 
         </Stack.Navigator>
       </NavigationContainer>

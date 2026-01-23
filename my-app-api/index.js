@@ -57,9 +57,9 @@ app.use((req, res) => {
 });
 
 // --- Nightly Scheduler (UK Time) ---
-// Runs at 02:00 AM every day
-cron.schedule('0 2 * * *', async () => {
-  console.log('🕒 Triggering Nightly Product Update...');
+// Runs at minute 0 of every hour
+cron.schedule('0 * * * *', async () => {
+  console.log('🕒 Triggering Hourly Product Update...');
   await runUpdate(false); // false = keep DB connection open
 }, {
   scheduled: true,

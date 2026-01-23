@@ -52,6 +52,14 @@ async function seedUsers() {
         ON CONFLICT (username) DO NOTHING;`, [commonPassword, salesId]);
     }
 
+    // 4. Insert Picker
+    await client.query(
+      `INSERT INTO users (username, password, role, name, email) 
+       VALUES ('picker1', $1, 'picker', 'Warehouse Picker 1', 'picker1@thames.com') 
+       ON CONFLICT (username) DO NOTHING;`,
+      [commonPassword]
+    );
+
     console.log('✅ Users seeded successfully.');
   } catch (err) {
     console.error('❌ Error seeding users:', err);

@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { View, Button, StyleSheet, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Image, TextInput, Modal, Alert, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { API_URL } from '../config/api';
@@ -21,6 +22,7 @@ export default function HomeScreen({ navigation, route }) {
   const [adminCustomers, setAdminCustomers] = useState([]);
   const [salesReps, setSalesReps] = useState([]);
   const [myCustomers, setMyCustomers] = useState([]);
+  const [pickerOrders, setPickerOrders] = useState([]);
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerDetailVisible, setCustomerDetailVisible] = useState(false);
@@ -96,8 +98,8 @@ export default function HomeScreen({ navigation, route }) {
     fetchData();
   }, [user]);
 
-  // Fetch Role-Based Data (Admin or Sales Rep)
-  useEffect(() => {
+  // Fetch Role-Based Data (Admin, Sales Rep, Picker)
+  useFocusEffect(React.useCallback(() => {
     const fetchRoleData = async () => {
       if (!user) return;
       
@@ -139,6 +141,13 @@ export default function HomeScreen({ navigation, route }) {
           if (Array.isArray(data)) {
             setMyCustomers(data);
           }
+        } else if (user.role === 'picker') {
+          // Fetch orders for Picker
+          const res = await fetch(`${API_URL}/api/orders`, { headers });
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setPickerOrders(data);
+          }
         }
       } catch (error) {
         console.error("Error fetching role data:", error);
@@ -148,7 +157,7 @@ export default function HomeScreen({ navigation, route }) {
     };
 
     fetchRoleData();
-  }, [user]);
+  }, [user]));
 
   const handleAssignRep = async (repId) => {
     if (!selectedCustomer) return;
@@ -304,6 +313,43 @@ export default function HomeScreen({ navigation, route }) {
                   </TouchableOpacity>
                 )}
                 ListEmptyComponent={<Text style={{marginLeft: 16, color: '#6c757d'}}>No customers found.</Text>}
+              />
+            )}
+          </View>
+        )}
+
+        {/* Picker Section: Orders to Pick */}
+        {user?.role === 'picker' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.trendingSectionTitle}>Orders to Pick</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('OrderList')}>
+                <Text style={styles.viewAllButton}>View All</Text>
+              </TouchableOpacity>
+            </View>
+            {roleLoading ? <ActivityIndicator color="#1d3557" /> : (
+              <FlatList
+                data={pickerOrders}
+                keyExtractor={item => item.id.toString()}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity 
+                    style={styles.adminCard}
+                    onPress={() => navigation.navigate('OrderDetail', { orderId: item.id })}
+                  >
+                    <View style={[styles.avatarContainer, { backgroundColor: '#FFF5F5' }]}>
+                      <Icon name="cube-outline" size={24} color="#E53E3E" />
+                    </View>
+                    <Text style={styles.adminCardTitle}>Order #{item.id}</Text>
+                    <Text style={styles.adminCardSubtitle}>{new Date(item.created_at).toLocaleDateString()}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: '#EBF8FF' }]}>
+                      <Text style={[styles.statusText, { color: '#3182CE' }]}>{item.status}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={<Text style={{marginLeft: 16, color: '#6c757d'}}>No new orders to pick.</Text>}
               />
             )}
           </View>
