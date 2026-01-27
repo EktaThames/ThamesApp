@@ -24,7 +24,7 @@ router.post('/assign-customer', async (req, res) => {
 router.get('/pending-users', async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT id, name, username, email, phone, address, created_at 
+      `SELECT * 
        FROM users 
        WHERE is_approved = false AND role = 'customer'
        ORDER BY id DESC`

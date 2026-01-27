@@ -3,6 +3,7 @@ require('dotenv').config(); // This MUST be the first line
 const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
+const helmet = require('helmet');
 const cron = require('node-cron');
 const { runUpdate } = require('./runNightlyUpdate');
 
@@ -24,6 +25,7 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());           // Enable CORS for all routes
 app.use(compression());    // Compress all responses
+app.use(helmet());         // Set secure HTTP headers
 app.use(express.json());   // Parse JSON request bodies
 
 // Test database connection on server start

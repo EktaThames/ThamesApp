@@ -40,6 +40,46 @@ const setupTables = async () => {
         email VARCHAR(255),
         phone VARCHAR(50),
         address TEXT,
+        
+        -- Business Details
+        company_name VARCHAR(255),
+        business_type VARCHAR(100),
+        entity_type VARCHAR(100),
+        
+        -- Trading Address (Split fields)
+        trading_address_line1 TEXT,
+        trading_address_line2 TEXT,
+        trading_city VARCHAR(100),
+        trading_zip VARCHAR(20),
+        trading_country VARCHAR(100),
+        
+        -- Owner Details
+        owner_first_name VARCHAR(100),
+        owner_last_name VARCHAR(100),
+        owner_address_line1 TEXT,
+        owner_address_line2 TEXT,
+        owner_city VARCHAR(100),
+        owner_zip VARCHAR(20),
+        owner_country VARCHAR(100),
+        owner_email VARCHAR(255),
+        owner_phone VARCHAR(50),
+        
+        -- Tax & Registration
+        vat_number VARCHAR(50),
+        eoid VARCHAR(50),
+        fid VARCHAR(50),
+        company_reg_number VARCHAR(50),
+        
+        -- Registered Address
+        reg_address_line1 TEXT,
+        reg_address_line2 TEXT,
+        reg_city VARCHAR(100),
+        reg_zip VARCHAR(20),
+        reg_country VARCHAR(100),
+        
+        -- Referral
+        referred_by VARCHAR(100),
+
         is_approved BOOLEAN DEFAULT FALSE,
         sales_rep_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         CONSTRAINT check_address_role CHECK (role = 'customer' OR address IS NULL),

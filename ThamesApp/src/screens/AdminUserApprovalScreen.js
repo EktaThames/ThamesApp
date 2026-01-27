@@ -59,13 +59,16 @@ export default function AdminUserApprovalScreen({ navigation }) {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{item.name?.charAt(0) || 'U'}</Text>
+          <Text style={styles.avatarText}>{item.company_name?.charAt(0) || item.name?.charAt(0) || 'U'}</Text>
         </View>
         <View style={styles.info}>
-          <Text style={styles.name}>{item.name}</Text>
+          <Text style={styles.name}>{item.company_name || item.name}</Text>
+          {item.company_name && <Text style={styles.subName}>{item.name} • {item.business_type}</Text>}
           <Text style={styles.email}>{item.email}</Text>
           <Text style={styles.detail}>{item.phone || 'No Phone'}</Text>
-          <Text style={styles.detail}>{item.address || 'No Address'}</Text>
+          <Text style={styles.detail}>
+            {[item.trading_address_line1, item.trading_city, item.trading_zip].filter(Boolean).join(', ') || item.address || 'No Address'}
+          </Text>
         </View>
       </View>
       <View style={styles.actions}>
@@ -116,6 +119,7 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 20, fontWeight: 'bold', color: '#2a9d8f' },
   info: { flex: 1 },
   name: { fontSize: 16, fontWeight: 'bold', color: '#1d3557' },
+  subName: { fontSize: 14, fontWeight: '600', color: '#4A5568', marginBottom: 2 },
   email: { fontSize: 14, color: '#2a9d8f', marginBottom: 4 },
   detail: { fontSize: 13, color: '#718096' },
   actions: { borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 },

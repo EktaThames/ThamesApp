@@ -1,10 +1,11 @@
 {
   "name": "Thames C&C",
   "slug": "thamescc-app",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "jsEngine": "hermes",
   "icon": "./assets/icon.png",
   "ios": {
+    "buildNumber": "1",
     "bundleIdentifier": "com.thamescc.app",
     "supportsTablet": true,
     "infoPlist": {
@@ -38,6 +39,7 @@
     }
   },
   "android": {
+    "versionCode": 1,
     "package": "com.thamescc.app",
     "permissions": [
       "android.permission.CAMERA",
