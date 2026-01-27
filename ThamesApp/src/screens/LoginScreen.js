@@ -54,7 +54,11 @@ export default function LoginScreen({ navigation }) {
 
     } catch (err) {
       setError(err.message);
-      Alert.alert('Login Failed', err.message);
+      if (err.message.includes('Network request failed')) {
+        Alert.alert('Connection Error', 'Unable to connect to the server. Please check your internet connection or try again later.');
+      } else {
+        Alert.alert('Login Failed', err.message);
+      }
     } finally {
       setLoading(false);
     }
