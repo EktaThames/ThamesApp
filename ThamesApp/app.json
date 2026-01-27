@@ -12,7 +12,10 @@
       "NSCameraUsageDescription": "This app uses the camera to upload images and scan content.",
       "NSPhotoLibraryUsageDescription": "This app allows you to select images from your photo library.",
       "NSPhotoLibraryAddUsageDescription": "This app saves images to your photo library when needed.",
-      "NSMicrophoneUsageDescription": "This app uses the microphone for media features."
+      "NSMicrophoneUsageDescription": "This app uses the microphone for media features.",
+      "NSAppTransportSecurity": {
+        "NSAllowsArbitraryLoads": true
+      }
     },
     "config": {
       "usesNonExemptEncryption": false

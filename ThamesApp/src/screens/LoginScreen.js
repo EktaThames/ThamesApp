@@ -55,7 +55,7 @@ export default function LoginScreen({ navigation }) {
     } catch (err) {
       setError(err.message);
       if (err.message.includes('Network request failed')) {
-        Alert.alert('Connection Error', 'Unable to connect to the server. Please check your internet connection or try again later.');
+        Alert.alert('Connection Error', `Unable to connect to:\n${API_URL}\n\n1. Check AWS Security Group (Port 3001).\n2. Ensure Server is Running.\n3. Check Mobile Data/WiFi.`);
       } else {
         Alert.alert('Login Failed', err.message);
       }
