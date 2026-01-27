@@ -78,7 +78,8 @@ router.post('/register', async (req, res) => {
 
   } catch (err) {
     console.error('🔥 Register Error:', err);
-    res.status(500).json({ message: 'Internal Server Error' });
+    // Send the actual error message to the app for debugging (e.g., "column company_name does not exist")
+    res.status(500).json({ message: err.message || 'Internal Server Error' });
   }
 });
 
