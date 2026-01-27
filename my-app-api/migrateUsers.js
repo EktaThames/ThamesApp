@@ -10,6 +10,8 @@ const migrateUsers = async () => {
 
     // List of columns to add with their data types
     const columns = [
+      "is_approved BOOLEAN DEFAULT FALSE",
+      "sales_rep_id INTEGER",
       "company_name VARCHAR(255)",
       "business_type VARCHAR(100)",
       "entity_type VARCHAR(100)",
