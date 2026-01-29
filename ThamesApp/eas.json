@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 16.28.0",
+    "version": ">= 16.30.0",
     "appVersionSource": "remote"
   },
   "build": {
@@ -12,14 +12,13 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "image": "latest"
+      }
     }
   },
   "submit": {
-    "production": {
-      "ios": {
-        "ascAppId": "6757694295"
-      }
-    }
+    "production": {}
   }
 }
